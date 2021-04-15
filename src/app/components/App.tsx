@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react'
 
 import '../styles/ui.css'
 
-import Img from '../assets/logo.svg'
-
+declare function require(path: string): any;
 
 const App = ({}) => {
   const [count, setCount] = useState(5)
@@ -29,6 +28,7 @@ const App = ({}) => {
   return (
     <div>
       <h2>Rectangle Creator</h2>
+      <img src={require('../assets/logo.svg')} alt="ff" />
       <p>
         Count: <input value={count} onChange={(e) => setCount(Number(e.target.value))} />
       </p>
