@@ -1,44 +1,44 @@
-import { LCH_to_P3, LCH_to_sRGB, P3_to_LCH, sRGB_to_LCH } from './util'
+import { LCH_to_sRGB, sRGB_to_LCH } from './util'
 
-const supportsP3 = false
 
-function alpha_to_string(a = 100) {
-  return a < 100 ? ` / ${a}%` : ''
+// *sRGB*:
+// MAIN:
+// r, g, b, a : 0 to 1
+// STRING (8-bit color):
+// rgb(250, 40, 110, 0.2)
+// STRING (universal):
+// rgb(45%, 50%, 20%, 0.2)
+
+// *LCH*:
+// MAIN:
+// l : 0 to 100 
+// c : 0 to 132
+// h : 0 to 360
+// a : 0 to 1
+// STRING:
+// lch(30% 50 200 / 0.5)
+
+// LCH max values
+const L_MAX = 100
+const C_MAX = 132
+const H_MAX = 360
+const A_MAX = 1
+
+
+
+// *Conversion functions*
+
+// Alpha value to string
+function alpha_to_sRGB_string(a = 1) {
+  return a < 1 ? `, ${a}` : ''
 }
-/*
-function LCH_to_r2020_string(l, c, h, a = 100) {
-  return (
-    'color(rec2020 ' +
-    LCH_to_r2020([+l, +c, +h])
-      .map((x) => {
-        x = Math.round(x * 10000) / 10000
-        return x
-      })
-      .join(' ') +
-    alpha_to_string(a) +
-    ')'
-  )
-}
-*/
-function LCH_to_P3_string(l, c, h, a = 100, forceInGamut = false) {
-  if (forceInGamut) {
-    ;[l, c, h] = force_into_gamut(l, c, h, isLCH_within_P3)
-  }
-
-  return (
-    'color(display-p3 ' +
-    LCH_to_P3([+l, +c, +h])
-      .map((x) => {
-        x = Math.round(x * 10000) / 10000
-        return x
-      })
-      .join(' ') +
-    alpha_to_string(a) +
-    ')'
-  )
+function alpha_to_LCH_string(a = 1) {
+  return a < 1 ? ` / ${a}` : ''
 }
 
-export function LCH_to_sRGB_string(l, c, h, a = 100, forceInGamut = false) {
+// rgb(0, 80, 82, 0.3) - 8 bit color
+// rgb(0%, 31.3%, 32.15%, 0.3) - more universal
+export function LCH_to_sRGB_string(l, c, h, a = 1, only8Bit, forceInGamut = false) {
   if (forceInGamut) {
     ;[l, c, h] = force_into_gamut(l, c, h, isLCH_within_sRGB)
   }
@@ -46,13 +46,89 @@ export function LCH_to_sRGB_string(l, c, h, a = 100, forceInGamut = false) {
   return (
     'rgb(' +
     LCH_to_sRGB([+l, +c, +h])
-      .map((x) => {
-        return Math.round(x * 10000) / 100 + '%'
-      })
-      .join(' ') +
-    alpha_to_string(a) +
+      .map(x => only8Bit ? Math.round(x * 255) : (Math.round(x * 10000) / 100) + '%').join(', ') +
+    alpha_to_sRGB_string(a) +
     ')'
   )
+}
+
+function check_LCH_bounds (l, c, h, a) {
+  if (l == undefined || c == undefined || h == undefined) throw 'Incorrect LCH value! (One of the parameters is undefined)'
+  if (l < 0 || c < 0 || h < 0 || a < 0) throw 'Incorrect LCH value! (One of the parameters is negative)'
+  if (l > L_MAX) throw `Incorrect LCH value! (l is more than ${L_MAX})`
+  if (c > C_MAX) throw `Incorrect LCH value! (c is more than ${C_MAX})`
+  if (h > H_MAX) throw `Incorrect LCH value! (h is more than ${H_MAX})`
+  if (a > A_MAX) throw `Incorrect LCH value! (a is more than ${A_MAX})`
+}
+export function LCH_to_LCH_string (l: Number, c: Number, h: Number, a = 1) {
+  check_LCH_bounds(l, c, h, a)
+
+  return `lch(${l}% ${c} ${h}${alpha_to_LCH_string(a)})`
+}
+export function LCH_string_to_LCH (LCHString: String) {
+  if (LCHString.slice(0, 3).toLowerCase() !== 'lch') 
+    throw 'Incorrect LCH string format! (1)'
+
+  let matches = LCHString.match(/\d*\.?\d+/g)
+  if (matches.length < 3 || matches.length > 4)
+    throw 'Incorrect LCH string format! (2)'
+  
+  let values = matches.map(v => Number(v))
+  let [l, c, h, a] = values
+
+  // Check if Alpha values is in percent or decimal
+  if (a != undefined) {
+    if (LCHString[LCHString.length - 2] === '%') a = a / 100
+  } else a = 1
+
+  check_LCH_bounds(l, c, h, a)
+
+  
+  return [l, c, h, a]
+}
+
+
+function check_sRGB_bounds (r, g, b, a) {
+  if (r < 0 || r > 1) throw 'Incorrect sRGB value! (r is out of [0,1] interval): ' + r
+  if (g < 0 || g > 1) throw 'Incorrect sRGB value! (g is out of [0,1] interval): ' + g
+  if (b < 0 || b > 1) throw 'Incorrect sRGB value! (b is out of [0,1] interval): ' + b
+  if (a < 0 || a > 1) throw 'Incorrect sRGB value! (a is out of [0,1] interval): ' + a
+}
+export function sRGB_to_sRGB_string (r: Number, g: Number, b: Number, a = 1, only8bit: Boolean) {
+  check_sRGB_bounds(r, g, b, a)
+
+  const toString = only8bit ? v => Math.round(v * 2550) / 10 : v => (Math.round(v * 10000) / 100) + '%'
+
+  return `rgb(${toString(r)}, ${toString(g)}, ${toString(b)}${alpha_to_sRGB_string(a)})`
+}
+export function sRGB_string_to_sRGB (sRGBString: String) {
+  if (sRGBString.slice(0, 3).toLowerCase() !== 'rgb') 
+    throw 'Incorrect sRGB string format! (1)'
+  
+  const only8Bit = !(sRGBString.match(/%/g)?.length >= 3)
+
+  let matches = sRGBString.match(/\d*\.?\d+/g)
+  if (matches.length < 3 || matches.length > 4)
+    throw 'Incorrect sRGB string format! (2)'
+  
+  let values = matches.map(v => Number(v))
+  let [r, g, b, a] = values
+
+
+  // Check if Alpha values is in percent or decimal
+  if (a != undefined) {
+    if (sRGBString[sRGBString.length - 2] === '%') a = a / 100
+  } else a = 1
+
+  const toString = only8Bit ? v => Math.round(v / 255 * 10000) / 10000 : v => Math.round(v * 100) / 10000
+  
+  ;[r, g, b] = [r, g, b].map(toString)
+  
+
+  check_sRGB_bounds(r, g, b, a)
+
+
+  return [r, g, b, a]
 }
 
 function force_into_gamut(l, c, h, isLCH_within) {
@@ -82,24 +158,13 @@ function force_into_gamut(l, c, h, isLCH_within) {
   return [l, c, h]
 }
 
-function isLCH_within_sRGB(l, c, h) {
+export function isLCH_within_sRGB(l, c, h) {
   var rgb = LCH_to_sRGB([+l, +c, +h])
   const ε = 0.000005
   return rgb.reduce((a, b) => a && b >= 0 - ε && b <= 1 + ε, true)
 }
 
-function isLCH_within_P3(l, c, h) {
-  var rgb = LCH_to_P3([+l, +c, +h])
-  const ε = 0.000005
-  return rgb.reduce((a, b) => a && b >= 0 - ε && b <= 1 + ε, true)
-}
-/*
-function isLCH_within_r2020(l, c, h) {
-  var rgb = LCH_to_r2020([+l, +c, +h])
-  const ε = 0.000005
-  return rgb.reduce((a, b) => a && b >= 0 - ε && b <= 1 + ε, true)
-}
-*/
+
 // Generate gradient stops for the sliders
 // (we need to use more to emulate proper interpolation)
 // @ts-ignore
@@ -108,9 +173,8 @@ function slider_stops(range, l, c, h, a, index) {
     .map((x) => {
       let args = [l, c, h, a, true]
       args[index] = x
-      var LCH_to_string = supportsP3 ? LCH_to_P3_string : LCH_to_sRGB_string
       let [l1, c1, h1, a1, forceInGamut1] = args
-      return LCH_to_string(l1, c1, h1, a1, forceInGamut1)
+      return LCH_to_sRGB_string(l1, c1, h1, a1, forceInGamut1)
     })
     .join(', ')
 }
@@ -123,26 +187,19 @@ function CSS_color_to_LCH(str) {
     return
   }
 
-  const prefixP3 = 'color(display-p3 '
+  
 
-  if (str.trim().indexOf(prefixP3) === 0) {
-    var params: number[] = str
-      .slice(prefixP3.length)
-      .match(/-?[\d.]+/g)
-      .map((x) => +x)
-    console.log(params)
-    var lch = P3_to_LCH(params.slice(0, 3))
-  } else {
-    // Assume RGBA for now, normalize via computed style
-    var dummy = document.createElement('_')
-    document.body.appendChild(dummy)
-    dummy.style.color = str
-    var computedStr = getComputedStyle(dummy).color
-    var params = computedStr.match(/-?[\d.]+/g).map((x) => +x)
+  
+  // Assume RGBA for now, normalize via computed style
+  var dummy = document.createElement('_')
+  document.body.appendChild(dummy)
+  dummy.style.color = str
+  var computedStr = getComputedStyle(dummy).color
+  var params = computedStr.match(/-?[\d.]+/g).map((x) => +x)
 
-    params = params.map((x, i) => (i < 3 ? x / 255 : x))
-    var lch = sRGB_to_LCH(params.slice(0, 3))
-  }
+  params = params.map((x, i) => (i < 3 ? x / 255 : x))
+  var lch = sRGB_to_LCH(params.slice(0, 3))
+  
 
   return {
     lightness: lch[0],
@@ -151,59 +208,3 @@ function CSS_color_to_LCH(str) {
     alpha: (params[3] || 1) * 100,
   }
 }
-
-// Produce a default (not very good) name
-/*
-function LCH_name(l, c, h) {
-  h = h % 360
-  var ret = []
-
-  if (l < 35) {
-    ret.push('Dark')
-  } else if (l > 70) {
-    ret.push('Light')
-  }
-
-  if (c > 10) {
-    if (c < 35) {
-      ret.push('Muted')
-    } else if (c > 70) {
-      if (l > 60) {
-        ret.push('Bright')
-      }
-    }
-
-    // Chromatic
-    for (let [hue, baseColor] of Object.entries({
-      20: 'Pink',
-      40: 'Red',
-      60: 'Orange',
-      100: 'Yellow',
-      150: 'Green',
-      210: 'Cyan',
-      260: 'Blue',
-      320: 'Purple',
-      360: 'Pink',
-    })) {
-      if (h <= hue) {
-        ret.push(baseColor)
-        break
-      }
-    }
-  } else {
-    if (c > 1) {
-      ret.unshift(h < 120 || h > 300 ? 'Warm' : 'Cool')
-    }
-
-    ret.push('Gray')
-  }
-
-  let res = ret.join(' ')
-  if (/Yellow$/.test(res) && l < 40) {
-    // Dark Yellow is an oxymoron
-    res = 'Brown'
-  }
-
-  return res
-}
-*/

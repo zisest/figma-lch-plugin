@@ -4,15 +4,22 @@ import '../styles/ui.css'
 
 declare function require(path: string): any;
 
-const App = ({}) => {
-  const [count, setCount] = useState(5)
+// Load images
+// const Img = require('../assets/logo.svg')
 
-  const onCreate = () => {
-    parent.postMessage({ pluginMessage: { type: 'create-rectangles', count } }, '*')
-  }
+// example usage
+// parent.postMessage({ pluginMessage: { type: 'create-rectangles', data } }, '*')
+
+const App = ({}) => {
+  const [RGBA, setRGBA] = useState([0, 0, 0, 1]) // every value is from 0 to 1
+  const [LCHA, setLCHA] = useState([0, 0, 0, 1])
+
 
   const onCancel = () => {
     parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*')
+  }
+  const onCheck = () => {
+    parent.postMessage({ pluginMessage: { type: 'check' } }, '*')
   }
 
   useEffect(() => {
@@ -28,11 +35,8 @@ const App = ({}) => {
   return (
     <div>
       <h2>Rectangle Creator</h2>
-      <img src={require('../assets/logo.svg')} alt="ff" />
-      <p>
-        Count: <input value={count} onChange={(e) => setCount(Number(e.target.value))} />
-      </p>
-      <button onClick={onCreate}>Create</button>
+      
+      <button onClick={onCheck}>Check</button>
       <button onClick={onCancel}>Cancel</button>
     </div>
   )
