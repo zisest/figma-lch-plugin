@@ -35,3 +35,8 @@ button:focus {
 input:focus {
   box-shadow: inset 0 0 0 2px #18a0fb;
 }
+
+.color-inputs {
+  display: grid;
+  grid-template-columns: repeat(3, 40px);
+}
