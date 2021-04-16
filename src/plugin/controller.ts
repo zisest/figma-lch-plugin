@@ -1,3 +1,4 @@
+
 import { 
   sRGB_to_LCH_values, 
   LCH_to_sRGB_values, 
@@ -7,9 +8,65 @@ import {
   LCH_to_LCH_string 
 } from './util/lch'
 
+// clone properties from Figma nodes
+function clone (val) {
+  const type = typeof val
+  if (val === null) {
+    return null
+  } else if (type === 'undefined' || type === 'number' ||
+             type === 'string' || type === 'boolean') {
+    return val
+  } else if (type === 'object') {
+    if (val instanceof Array) {
+      return val.map(x => clone(x))
+    } else if (val instanceof Uint8Array) {
+      return new Uint8Array(val)
+    } else {
+      let o = {}
+      for (const key in val) {
+        o[key] = clone(val[key])
+      }
+      return o
+    }
+  }
+  throw 'unknown'
+}
+
+
+console.log('%c STARTUP', 'color: orange')
+let AUTO_REPAINT = false
+figma.clientStorage.getAsync('AUTO_REPAINT').then(res => {
+  if (res != undefined) AUTO_REPAINT = res
+  figma.ui.postMessage({
+    type: 'set-auto-repaint-ui',
+    message: { value: res },
+  })
+})
+
+
 figma.showUI(__html__, { width: 300, height: 400 })
 
+figma.on('selectionchange', () => {
+  let node = <RectangleNode>figma.currentPage.selection[0]
+  let fill = node?.fills[0]
+  let color = fill?.color
+  
+  if (color)
+    console.log(color)
+})
+
 figma.ui.onmessage = (msg) => {
+  if (msg.type === 'set-auto-repaint') {
+    let { value } = msg.message
+    figma.clientStorage.setAsync('AUTO_REPAINT', value)
+    AUTO_REPAINT = value
+
+    figma.ui.postMessage({
+      type: 'set-auto-repaint-ui',
+      message: { value },
+    })
+  }
+
   if (msg.type === 'cancel')
     figma.closePlugin()
 
@@ -40,9 +97,10 @@ figma.ui.onmessage = (msg) => {
     let response = {      
       type: 'color-update'
     }
-    
+    let newRGBColor
 
     switch (initiator) {
+      case 'ALPHA_SLIDER':
       case 'ALPHA': {
         let { prevState } = msg.message
         let a = value
@@ -60,7 +118,8 @@ figma.ui.onmessage = (msg) => {
           LCH: [l, c, h, a],
           LCH_CSS
         }
-        figma.ui.postMessage({ ...response, message: newState })
+        newRGBColor = newState.RGB
+        figma.ui.postMessage({ ...response, message: { initiator, state: newState } })
 
         break
       }
@@ -79,9 +138,11 @@ figma.ui.onmessage = (msg) => {
           LCH,
           LCH_CSS
         }
-        figma.ui.postMessage({ ...response, message: newState })
+        newRGBColor = newState.RGB
+        figma.ui.postMessage({ ...response, message: { initiator, state: newState } })
         break
       }
+      case 'LCH_SLIDER':
       case 'LCH': {
         let [l, c, h, a] = value
         let LCH_CSS = LCH_to_LCH_string(l, c, h, a)
@@ -97,7 +158,8 @@ figma.ui.onmessage = (msg) => {
           LCH: value,
           LCH_CSS
         }
-        figma.ui.postMessage({ ...response, message: newState })
+        newRGBColor = newState.RGB
+        figma.ui.postMessage({ ...response, message: { initiator, state: newState } })
         break
       }
       case 'RGB_CSS': {
@@ -115,7 +177,8 @@ figma.ui.onmessage = (msg) => {
           LCH,
           LCH_CSS
         }
-        figma.ui.postMessage({ ...response, message: newState })
+        newRGBColor = newState.RGB
+        figma.ui.postMessage({ ...response, message: { initiator, state: newState } })
         break
 
       }
@@ -134,7 +197,8 @@ figma.ui.onmessage = (msg) => {
           LCH: [l, c, h, a],
           LCH_CSS
         }
-        figma.ui.postMessage({ ...response, message: newState })
+        newRGBColor = newState.RGB
+        figma.ui.postMessage({ ...response, message: { initiator, state: newState } })
 
         break
       }
@@ -143,6 +207,46 @@ figma.ui.onmessage = (msg) => {
 
     }
 
+    let [r, g, b, a] = newRGBColor
+    if (AUTO_REPAINT) fillSelection(figma.currentPage.selection, r, g, b, a)    
+
+  }
+
+  if (msg.type === 'paint-selection') {
+    let [r, g, b, a] = msg.message.color
+    fillSelection(figma.currentPage.selection, r, g, b, a)    
+  }
+
+  function fillSelection (selection, r, g, b, a) {
+    for (let node of selection) {
+      node = <RectangleNode>node
+      let fills = fillNode(node, r, g, b, a)
+      console.log(node.fills, fills)
+      node.fills = fills
+    }
+  }
+
+  function fillNode (node: RectangleNode, r, g, b, a) {
+    const FILL_TEMPLATE = (r, g, b, a) => ({
+      blendMode: 'NORMAL',
+      color: { r, g, b },
+      opacity: a,
+      type: 'SOLID',
+      visible: true
+    })
+    const PARTIAL_FILL_TEMPLATE = (r, g, b, a) => ({
+      color: { r, g, b },
+      opacity: a
+    })
+
+
+    const fills = clone(node.fills)
+    
+    if (!fills.length) return [FILL_TEMPLATE(r, g, b, a)]
+
+    if (fills[fills.length - 1].type !== 'SOLID') return [...fills.slice(0, fills.length - 1), FILL_TEMPLATE(r, g, b, a)]
+
+    return [...fills.slice(0, fills.length - 1), { ...fills[fills.length - 1], ...PARTIAL_FILL_TEMPLATE(r, g, b, a) }]         
     
   }
 

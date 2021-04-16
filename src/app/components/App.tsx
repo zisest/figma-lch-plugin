@@ -1,4 +1,4 @@
-import React, { useReducer, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 import '../styles/ui.css'
 
@@ -25,11 +25,34 @@ const App = ({}) => {
   const [RGBString, setRGBString] = useState(initialState.RGB_CSS_8)
   const [LCHString, setLCHString] = useState(initialState.LCH_CSS)
 
-  //const [cursorPos, setCursorPos] = useState({})
+  // Settings from plugin's clientStorage
+  const [autoRepaint, setAutoRepaint] = useState(false)
 
 
 
-  const handleSliders = (e) => {
+  function paintSelection () {
+    parent.postMessage({ pluginMessage: { type: 'paint-selection', message: { color: state.RGB } } }, '*')
+  }
+  function switchAutoRepaint (value: boolean) {
+    console.log('Request controller to change auto-repaint to: ', value)
+    parent.postMessage({ pluginMessage: { type: 'set-auto-repaint', message: { value } } }, '*')
+  }
+
+
+  const handleLCH = (e) => {
+    let initiator: String
+
+    if (e.target.type === 'text') {
+      initiator = 'LCH'
+
+      if (!/\d*\.?\d*/.test(e.target.value)) {
+        e.preventDefault()
+        return
+      }
+    } else {
+      initiator = 'LCH_SLIDER'
+    }
+
     const LCH_MAP = {
       lightness: 0,
       chroma: 1,
@@ -39,18 +62,10 @@ const App = ({}) => {
     let v = Number(e.target.value)    
     let lch = [...state.LCH]
     lch[LCH_MAP[e.target.name]] = v
-    parent.postMessage({ pluginMessage: { type: 'color-input', message: { initiator: 'LCH', value: lch } } }, '*')
-  }
-  const handleLCHFields = (e) => {
-    console.log(e.target.value)
-    if (!/\d*\.?\d*/.test(e.target.value)) {
-      e.preventDefault()
-      return
-    }
-    handleSliders(e)
+    parent.postMessage({ pluginMessage: { type: 'color-input', message: { initiator, value: lch } } }, '*')
   }
 
-  const handleRGBFields = (e) => {    
+  const handleRGB = (e) => {    
     if (!/^\d*\.?\d*$/.test(e.target.value)) {
       e.preventDefault()
       return
@@ -72,21 +87,23 @@ const App = ({}) => {
   }
 
   const handleAlpha = (e) => {
+    let initiator: String
     if (e.target.type === 'text') {
-
-      //setCursorPos(prev => ({...prev, [e.target.name]: e.target.selectionStart }))
+      initiator = 'ALPHA'
 
       if (!/^\d*\.?\d*$/.test(e.target.value)) {
         e.preventDefault()
         return
       }
+    } else {
+      initiator = 'ALPHA_SLIDER'
     }
     
     let value = e.target.value / 100
 
     parent.postMessage({ pluginMessage: {
        type: 'color-input', 
-       message: { initiator: 'ALPHA', value, prevState: state } 
+       message: { initiator, value, prevState: state } 
       } }, 
     '*')
   }
@@ -125,7 +142,11 @@ const App = ({}) => {
       switch (type) {
         case 'color-update':
           console.log(message)
-          setState(message)
+          setState(message.state)
+          break
+        case 'set-auto-repaint-ui':
+          console.log('Set autorepaint from controller on ui', message.value)
+          setAutoRepaint(message.value)
         default:
           break
       }
@@ -133,17 +154,13 @@ const App = ({}) => {
     }
   }, [])
 
-  
-  useEffect(() => {
-    //console.log(cursorPos)
-  }, [state])
 
   return (
     <div>
       <div style={{ backgroundColor: state.RGB_CSS_8 }}>{state.RGB_CSS}</div>
-      <input type="range" min="0" step="1" max="100" name="lightness" value={state.LCH[0]} onChange={handleSliders} />
-      <input type="range" min="0" step="1" max="132" name="chroma" value={state.LCH[1]} onChange={handleSliders} />
-      <input type="range" min="0" step="1" max="360" name="hue" value={state.LCH[2]} onChange={handleSliders} />
+      <input type="range" min="0" step="1" max="100" name="lightness" value={state.LCH[0]} onChange={handleLCH} />
+      <input type="range" min="0" step="1" max="132" name="chroma" value={state.LCH[1]} onChange={handleLCH} />
+      <input type="range" min="0" step="1" max="360" name="hue" value={state.LCH[2]} onChange={handleLCH} />
 
       <input type="range" min="0" step="1" max="100" name="alpha"
        value={Math.round(state.LCH[3] * 100)} 
@@ -151,14 +168,14 @@ const App = ({}) => {
       />
 
       <div className="color-inputs">
-        <input type="text" name="lightness" value={state.LCH[0]} onChange={handleLCHFields} />
-        <input type="text" name="chroma" value={state.LCH[1]} onChange={handleLCHFields} />
-        <input type="text" name="hue" value={state.LCH[2]} onChange={handleLCHFields} />
+        <input type="text" name="lightness" value={state.LCH[0]} onChange={handleLCH} />
+        <input type="text" name="chroma" value={state.LCH[1]} onChange={handleLCH} />
+        <input type="text" name="hue" value={state.LCH[2]} onChange={handleLCH} />
       </div>
       <div className="color-inputs">
-        <input type="text" name="red" value={Math.round(state.RGB[0] * 255)} onChange={handleRGBFields} />
-        <input type="text" name="green" value={Math.round(state.RGB[1] * 255)} onChange={handleRGBFields} />
-        <input type="text" name="blue" value={Math.round(state.RGB[2] * 255)} onChange={handleRGBFields} />
+        <input type="text" name="red" value={Math.round(state.RGB[0] * 255)} onChange={handleRGB} />
+        <input type="text" name="green" value={Math.round(state.RGB[1] * 255)} onChange={handleRGB} />
+        <input type="text" name="blue" value={Math.round(state.RGB[2] * 255)} onChange={handleRGB} />
       </div>
       <input type="text" name="alpha" value={Math.round(state.LCH[3] * 100)} onChange={handleAlpha} />
 
@@ -166,6 +183,10 @@ const App = ({}) => {
       <input type="text" name="rgb-css" value={RGBString} onChange={handleCSSFields} />
 
       <button onClick={() => setIsRGB8Bit(prev => !prev)}>Change</button>
+      <br></br>
+      <button onClick={paintSelection}>Paint selection</button>
+      <label>auto repaint<input type="checkbox" checked={autoRepaint} onChange={() => switchAutoRepaint(!autoRepaint)} /></label>
+
     </div>
   )
 }
