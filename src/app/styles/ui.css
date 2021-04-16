@@ -1,7 +1,10 @@
 body {
-  font: 12px sans-serif;
+  font-size: 11px;
+  font-family: 'Inter', sans-serif;
   text-align: center;
-  margin: 20px;
+  margin: 0;
+
+  color: #333333;
 }
 button {
   border-radius: 5px;
@@ -12,6 +15,7 @@ button {
   margin: 0 5px;
   box-shadow: inset 0 0 0 1px black;
   outline: none;
+  font-family: inherit;
 }
 #create {
   box-shadow: none;
@@ -22,6 +26,8 @@ input {
   border: none;
   outline: none;
   padding: 8px;
+  font-family: inherit;
+  font-size: inherit;
 }
 input:hover {
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
@@ -36,6 +42,10 @@ input:focus {
   box-shadow: inset 0 0 0 2px #18a0fb;
 }
 
+
+.color-preview {
+  height: 40px;
+}
 .color-inputs {
   display: grid;
   grid-template-columns: repeat(3, 40px);

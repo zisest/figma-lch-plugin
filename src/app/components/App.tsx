@@ -157,7 +157,7 @@ const App = ({}) => {
 
   return (
     <div>
-      <div style={{ backgroundColor: state.RGB_CSS_8 }}>{state.RGB_CSS}</div>
+      <div className="color-preview" style={{ backgroundColor: state.RGB_CSS }}></div>
       <input type="range" min="0" step="1" max="100" name="lightness" value={state.LCH[0]} onChange={handleLCH} />
       <input type="range" min="0" step="1" max="132" name="chroma" value={state.LCH[1]} onChange={handleLCH} />
       <input type="range" min="0" step="1" max="360" name="hue" value={state.LCH[2]} onChange={handleLCH} />

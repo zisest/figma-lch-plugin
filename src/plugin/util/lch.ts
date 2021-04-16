@@ -63,7 +63,7 @@ export function LCH_string_to_LCH(LCHString: String) {
 
   check_LCH_bounds(l, c, h, a)
 
-  return [l, c, h, a]
+  return <[number, number, number, number]>[l, c, h, a]
 }
 
 function check_sRGB_bounds(r, g, b, a) {
@@ -101,23 +101,23 @@ export function sRGB_string_to_sRGB(sRGBString: String) {
 
   check_sRGB_bounds(r, g, b, a)
 
-  return [r, g, b, a]
+  return <[number, number, number, number]>[r, g, b, a]
 }
 
-export function LCH_to_sRGB_values(l: Number, c: Number, h: Number, a: Number = 1, forceInGamut = false) {
+export function LCH_to_sRGB_values(l: number, c: number, h: number, a: number = 1, forceInGamut = false) {
   check_LCH_bounds(l, c, h, a)
 
   if (forceInGamut) {
     ;[l, c, h] = force_into_gamut(l, c, h)
   }
   let sRGB = [...LCH_to_sRGB([l, c, h]), a].map(v => Math.round(v * 100) / 100)
-  return sRGB
+  return <[number, number, number, number]>sRGB
 }
-export function sRGB_to_LCH_values(r: Number, g: Number, b: Number, a: Number = 1) {
+export function sRGB_to_LCH_values(r: number, g: number, b: number, a: number = 1) {
   check_sRGB_bounds(r, g, b, a)
 
   let LCH = [...sRGB_to_LCH([r, g, b]), a].map(v => Math.round(v * 100) / 100)
-  return LCH
+  return <[number, number, number, number]>LCH
 }
 
 // rgb(0, 80, 82, 0.3) - 8 bit color
