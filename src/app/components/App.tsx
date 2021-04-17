@@ -9,6 +9,7 @@ import IconButton from './IconButton'
 import Button from './Button'
 import SectionTitle from './SectionTitle'
 import Icon from './Icon'
+import Slider from './Slider'
 
 declare function require(path: string): any
 
@@ -24,6 +25,7 @@ const initialState = {
   RGB_CSS_8: 'rgb(0, 0, 0)',
   RGB_CSS: 'rgb(0%, 0%, 0%)',
   LCH_CSS: 'lch(0% 0 0)',
+  GRADIENT_STOPS: ['black, white', 'black, black', 'black, black', 'transparent, black']
 }
 
 const App = ({}) => {
@@ -149,7 +151,7 @@ const App = ({}) => {
       const { type, message } = event.data.pluginMessage
       switch (type) {
         case 'color-update':
-          console.log(message)
+          console.log(message.state.GRADIENT_STOPS)
           setState(message.state)
           break
         case 'set-auto-repaint-ui':
@@ -166,13 +168,22 @@ const App = ({}) => {
   return (
     <div>
       <div className="color-preview" style={{ backgroundColor: state.RGB_CSS }}></div>
-      <input type="range" min="0" step="1" max="100" name="lightness" value={state.LCH[0]} onChange={handleLCH} />
-      <input type="range" min="0" step="1" max="132" name="chroma" value={state.LCH[1]} onChange={handleLCH} />
-      <input type="range" min="0" step="1" max="360" name="hue" value={state.LCH[2]} onChange={handleLCH} />
-
-      <input type="range" min="0" step="1" max="100" name="alpha"
+      <Slider 
+        min={0} step={1} max={100} name="lightness" value={state.LCH[0]} 
+        onChange={handleLCH} gradientStops={state.GRADIENT_STOPS[0]} 
+      />
+      <Slider 
+        min={0} step={1} max={132} name="chroma" value={state.LCH[1]} 
+        onChange={handleLCH} gradientStops={state.GRADIENT_STOPS[1]}
+      />
+      <Slider 
+        min={0} step={1} max={360} name="hue" value={state.LCH[2]} 
+        onChange={handleLCH} gradientStops={state.GRADIENT_STOPS[2]} 
+      />
+      <Slider min={0} step={1} max={100} name="alpha"
        value={Math.round(state.LCH[3] * 100)} 
-       onChange={handleAlpha}
+       onChange={handleAlpha} gradientStops={state.GRADIENT_STOPS[3]} 
+       thumbColor={state.RGB_CSS_8}
       />
       
       <div className="color-inputs">

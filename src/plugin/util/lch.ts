@@ -72,8 +72,8 @@ function check_sRGB_bounds(r, g, b, a) {
   if (b < 0 || b > 1) throw 'Incorrect sRGB value! (b is out of [0,1] interval): ' + b
   if (a < 0 || a > 1) throw 'Incorrect sRGB value! (a is out of [0,1] interval): ' + a
 }
-export function sRGB_to_sRGB_string(r: Number, g: Number, b: Number, a = 1, only8bit: Boolean) {
-  check_sRGB_bounds(r, g, b, a)
+export function sRGB_to_sRGB_string(r: Number, g: Number, b: Number, a = 1, only8bit: Boolean, checkBounds = true) {
+  if (checkBounds) check_sRGB_bounds(r, g, b, a)
 
   const toString = only8bit ? (v) => Math.round(v * 2550) / 10 : (v) => Math.round(v * 10000) / 100 + '%'
 
@@ -120,22 +120,6 @@ export function sRGB_to_LCH_values(r: number, g: number, b: number, a: number = 
   return <[number, number, number, number]>LCH
 }
 
-// rgb(0, 80, 82, 0.3) - 8 bit color
-// rgb(0%, 31.3%, 32.15%, 0.3) - more universal
-function LCH_to_sRGB_string(l, c, h, a = 1, only8Bit, forceInGamut = false) {
-  if (forceInGamut) {
-    ;[l, c, h] = force_into_gamut(l, c, h)
-  }
-
-  return (
-    'rgb(' +
-    LCH_to_sRGB([+l, +c, +h])
-      .map((x) => (only8Bit ? Math.round(x * 255) : Math.round(x * 10000) / 100 + '%'))
-      .join(', ') +
-    alpha_to_sRGB_string(a) +
-    ')'
-  )
-}
 
 function force_into_gamut(l, c, h) {
   // Moves an lch color into the sRGB gamut
@@ -172,40 +156,21 @@ export function isLCH_within_sRGB(l, c, h) {
 
 // Generate gradient stops for the sliders
 // (we need to use more to emulate proper interpolation)
+export function range (from, to, stops) {
+  let step = (to - from) / (stops - 1)
+  return Array(stops).fill(0).map((_, i) => i * step)
+}
+
 // @ts-ignore
-function slider_stops(range, l, c, h, a, index) {
+export function slider_stops(range, l, c, h, a, index) {
   return range
     .map((x) => {
-      let args = [l, c, h, a, true]
+      let forceInGamut = false // don't force into sRGB gamut & don't check if is inside (0,1) bounds
+      let args = [l, c, h, a]
       args[index] = x
-      let [l1, c1, h1, a1, forceInGamut1] = args
-      return LCH_to_sRGB_string(l1, c1, h1, a1, forceInGamut1)
+      let [l1, c1, h1, a1] = args
+      return sRGB_to_sRGB_string(...LCH_to_sRGB_values(l1, c1, h1, a1, forceInGamut), true, forceInGamut)
     })
     .join(', ')
 }
 
-// @ts-ignore
-function CSS_color_to_LCH(str) {
-  str = str || prompt('Enter any sRGB color format your browser recognizes, or a color(display-p3) color')
-
-  if (!str) {
-    return
-  }
-
-  // Assume RGBA for now, normalize via computed style
-  var dummy = document.createElement('_')
-  document.body.appendChild(dummy)
-  dummy.style.color = str
-  var computedStr = getComputedStyle(dummy).color
-  var params = computedStr.match(/-?[\d.]+/g).map((x) => +x)
-
-  params = params.map((x, i) => (i < 3 ? x / 255 : x))
-  var lch = sRGB_to_LCH(params.slice(0, 3))
-
-  return {
-    lightness: lch[0],
-    chroma: lch[1],
-    hue: lch[2],
-    alpha: (params[3] || 1) * 100,
-  }
-}

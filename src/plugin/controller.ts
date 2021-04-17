@@ -5,7 +5,8 @@ import {
   sRGB_string_to_sRGB, 
   sRGB_to_sRGB_string, 
   LCH_string_to_LCH, 
-  LCH_to_LCH_string 
+  LCH_to_LCH_string,
+  range, slider_stops
 } from './util/lch'
 
 
@@ -62,8 +63,7 @@ figma.ui.onmessage = (msg) => {
     let newState = getFullColorData(initiator, value, prevState)
     figma.ui.postMessage({ ...response, message: { initiator, state: newState } })
 
-    let [r, g, b, a] = newState.RGB
-    if (AUTO_REPAINT) fillSelection(figma.currentPage.selection, r, g, b, a)    
+    if (AUTO_REPAINT) fillSelection(figma.currentPage.selection, ...newState.RGB)    
   }
 
   // Fill selection with color when requested
@@ -85,7 +85,9 @@ function colorsToStrings (RGB: [number, number, number, number], LCH: [number, n
   }
 }
 function getFullColorData (from, value, prevState = null) {
-  let RGB: [number, number, number, number], LCH: [number, number, number, number]
+  let RGB: [number, number, number, number], 
+  LCH: [number, number, number, number], 
+  GRADIENT_STOPS: [string, string, string, string]
 
   switch (from) {
     case 'RGB':
@@ -111,20 +113,36 @@ function getFullColorData (from, value, prevState = null) {
       LCH = prevState.LCH
       RGB[3] = value
       LCH[3] = value
+      GRADIENT_STOPS = prevState.GRADIENT_STOPS
       break
     default:
       throw 'default @ getFullColorData: ' + from
 
   }
 
+  // Generate CSS strings
   let strings = colorsToStrings(RGB, LCH)
+  // Generate gradient stops for sliders
+  GRADIENT_STOPS ||= getGradientStops(LCH[0], LCH[1], LCH[2])
 
   let newState = {
-    RGB, LCH, ...strings
+    RGB, LCH, ...strings, GRADIENT_STOPS
   }
 
   return newState
 }
+
+// Calculate gradient color stops
+function getGradientStops (l: number, c: number, h: number): [string, string, string, string] {
+    console.log('calc stops')
+    const L = slider_stops(range(0, 100, 6), null, c, h, 1, 0)
+    const C = slider_stops(range(0, 132, 6), l, null, h, 1, 1)
+    const H = slider_stops(range(0, 360, 13), l, c, null, 1, 2)
+    const A = slider_stops(range(0, 1, 3), l, c, h, null, 3)
+
+    return [L, C, H, A]
+}
+
 
 // Fill nodes
 function fillNode (node: RectangleNode, r, g, b, a) {
