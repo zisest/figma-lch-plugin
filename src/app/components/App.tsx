@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from 'react'
 
+import '../styles/variables.css'
 import '../styles/ui.css'
+
+import Checkbox from './Checkbox'
+import TextInput from './TextInput'
+import IconButton from './IconButton'
+import Button from './Button'
+import SectionTitle from './SectionTitle'
+import Icon from './Icon'
 
 declare function require(path: string): any
 
@@ -166,27 +174,30 @@ const App = ({}) => {
        value={Math.round(state.LCH[3] * 100)} 
        onChange={handleAlpha}
       />
-
+      
       <div className="color-inputs">
-        <input type="text" name="lightness" value={state.LCH[0]} onChange={handleLCH} />
-        <input type="text" name="chroma" value={state.LCH[1]} onChange={handleLCH} />
-        <input type="text" name="hue" value={state.LCH[2]} onChange={handleLCH} />
+        <Icon text="LCH" />
+        <TextInput name="lightness" value={state.LCH[0]} onChange={handleLCH} />
+        <TextInput name="chroma" value={state.LCH[1]} onChange={handleLCH} />
+        <TextInput name="hue" value={state.LCH[2]} onChange={handleLCH} />
       </div>
       <div className="color-inputs">
-        <input type="text" name="red" value={Math.round(state.RGB[0] * 255)} onChange={handleRGB} />
-        <input type="text" name="green" value={Math.round(state.RGB[1] * 255)} onChange={handleRGB} />
-        <input type="text" name="blue" value={Math.round(state.RGB[2] * 255)} onChange={handleRGB} />
+        <Icon text="RGB" />
+        <TextInput name="red" value={Math.round(state.RGB[0] * 255)} onChange={handleRGB} />
+        <TextInput name="green" value={Math.round(state.RGB[1] * 255)} onChange={handleRGB} />
+        <TextInput name="blue" value={Math.round(state.RGB[2] * 255)} onChange={handleRGB} />
       </div>
-      <input type="text" name="alpha" value={Math.round(state.LCH[3] * 100)} onChange={handleAlpha} />
+      <TextInput name="alpha" value={Math.round(state.LCH[3] * 100)} onChange={handleAlpha} />
+      <SectionTitle>CSS strings</SectionTitle>
+      <TextInput value={LCHString} onChange={handleCSSFields} name="lch-css"/>
+      <TextInput value={RGBString} onChange={handleCSSFields} name="rgb-css"/>
 
-      <input type="text" name="lch-css" value={LCHString} onChange={handleCSSFields} />
-      <input type="text" name="rgb-css" value={RGBString} onChange={handleCSSFields} />
+      
+      <IconButton onClick={() => setIsRGB8Bit(prev => !prev)} iconName="swap" />
 
-      <button onClick={() => setIsRGB8Bit(prev => !prev)}>Change</button>
       <br></br>
-      <button onClick={paintSelection}>Paint selection</button>
-      <label>auto repaint<input type="checkbox" checked={autoRepaint} onChange={() => switchAutoRepaint(!autoRepaint)} /></label>
-
+      <Button onClick={paintSelection} disabled={autoRepaint}>Paint selection</Button>
+      <Checkbox label="Auto-repaint" checked={autoRepaint} onChange={() => switchAutoRepaint(!autoRepaint)} id="input_auto-repaint" />
     </div>
   )
 }
