@@ -13,7 +13,7 @@ import {
 
 // *Plugin startup*
 console.log('%c STARTUP', 'color: orange')
-figma.showUI(__html__, { width: 240, height: 486 })
+figma.showUI(__html__, { width: 240, height: 455 })
 
 // Setting AUTO_REPAINT from clientStorage
 let AUTO_REPAINT = false
@@ -28,11 +28,22 @@ figma.clientStorage.getAsync('AUTO_REPAINT').then(res => {
 
 
 // *Selection*
+function handleSelection () {
+  let { selection } = figma.currentPage
+  let selectionValid = setColorFromSelection(selection) && selection.length === 1
+
+  figma.ui.postMessage({
+    type: 'set-selection-valid',
+    message: { value: selectionValid },
+  })
+}
 // Check if something is selected on startup => use that fill color
-setColorFromSelection(figma.currentPage.selection)
+// and disable/enable 'Pick color' button
+handleSelection()
 // On selection change => update color
-figma.on('selectionchange', () => {
-  setColorFromSelection(figma.currentPage.selection)
+// and disable/enable 'Pick color' button
+figma.on('selectionchange', () => {  
+  handleSelection()
 })
 
 
@@ -72,6 +83,11 @@ figma.ui.onmessage = (msg) => {
   if (msg.type === 'paint-selection') {
     let [r, g, b, a] = msg.message.color
     fillSelection(figma.currentPage.selection, r, g, b, a)    
+  }
+
+  // Pick color from selection
+  if (msg.type === 'pick-from-selection') {
+    setColorFromSelection(figma.currentPage.selection)  
   }
 
 
@@ -200,7 +216,9 @@ function setColorFromSelection (selection) {
     let newState = getFullColorData('RGB', [color.r, color.g, color.b, opacity])
 
     figma.ui.postMessage({ type: 'color-update', message: { initiator: 'SELECTION', state: newState } })
+    return true
   }    
+  return false
 }
 
 // util

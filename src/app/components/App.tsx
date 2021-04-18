@@ -85,6 +85,7 @@ const App = ({}) => {
 
   // Settings from plugin's clientStorage
   const [autoRepaint, setAutoRepaint] = useState(false)
+  const [selectionValid, setSelectionValid] = useState(false)
 
   // *Semi-controlled inputs*
   // Handle alpha text field values
@@ -148,6 +149,7 @@ const App = ({}) => {
       value = (Number.parseInt(value) || 0) / 100
     } else {
       initiator = 'ALPHA_SLIDER'
+      value = Number(value)
     }
     
 
@@ -218,6 +220,9 @@ const App = ({}) => {
   function paintSelection () {
     parent.postMessage({ pluginMessage: { type: 'paint-selection', message: { color: state.RGB } } }, '*')
   }
+  function pickFromSelection () {
+    parent.postMessage({ pluginMessage: { type: 'pick-from-selection' } }, '*')
+  }
   function switchAutoRepaint (value: boolean) {
     console.log('Request controller to change auto-repaint to: ', value)
     parent.postMessage({ pluginMessage: { type: 'set-auto-repaint', message: { value } } }, '*')
@@ -235,6 +240,11 @@ const App = ({}) => {
         case 'set-auto-repaint-ui':
           console.log('Set autorepaint from controller on ui', message.value)
           setAutoRepaint(message.value)
+          break
+        case 'set-selection-valid':
+          console.log('Set selectionValid from controller on ui', message.value)
+          setSelectionValid(message.value)
+          break
         default:
           break
       }
@@ -307,8 +317,8 @@ const App = ({}) => {
       </div>
       
       
-
-      <div className="section">
+      <div className="section buttons-section">
+        <Button onClick={pickFromSelection} disabled={!selectionValid}>Pick color</Button>
         <Button onClick={paintSelection} disabled={autoRepaint}>Paint selection</Button>
         <Checkbox label="Auto-repaint" checked={autoRepaint} onChange={() => switchAutoRepaint(!autoRepaint)} id="input_auto-repaint" />
       </div>
