@@ -77,7 +77,9 @@
   --size-xxxlarge: 80px;
 
   /* */
-  --transparency: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill-opacity=".1"><rect width="50" height="50" /><rect x="50" y="50" width="50" height="50" /></svg>') 0 0 / 6px 6px #ffffff
+  --transparency: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill-opacity=".1"><rect width="50" height="50" /><rect x="50" y="50" width="50" height="50" /></svg>') 0 0 / 6px 6px #ffffff;
+  --transparency-large: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill-opacity=".02"><rect width="50" height="50" /><rect x="50" y="50" width="50" height="50" /></svg>') 0 0 / 20px 20px #efefef;
+
 }
 
 /* Global styles */

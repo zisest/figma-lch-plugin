@@ -81,7 +81,8 @@ function colorsToStrings (RGB: [number, number, number, number], LCH: [number, n
   return {
     LCH_CSS: LCH_to_LCH_string(...LCH),
     RGB_CSS: sRGB_to_sRGB_string(...RGB, false),
-    RGB_CSS_8: sRGB_to_sRGB_string(...RGB, true)
+    RGB_CSS_8: sRGB_to_sRGB_string(...RGB, true),
+    RGB_CSS_8_OPAQUE: sRGB_to_sRGB_string(RGB[0], RGB[1], RGB[2], 1, true)
   }
 }
 function getFullColorData (from, value, prevState = null) {

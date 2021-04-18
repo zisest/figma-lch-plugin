@@ -5,11 +5,28 @@
 .ui {
 }
 .color-preview {
+  display: flex;
   height: 40px;
+  width: 100%;  
 }
-.sliders {
+.color-preview_opaque {
+  width: 50%;
+  height: 100%;
+  background: var(--current-color-opaque);
+}
+.color-preview_transparent {
+  width: 50%;
+  height: 100%;
+  background: var(--transparency-large);
+}
+.color-preview_transparent::after {
+  display: block;
+  content: '';
+  width: 100%;
+  height: 100%;
+  background: var(--current-color);
+}
 
-}
 
 .color-inputs {
   display: grid;

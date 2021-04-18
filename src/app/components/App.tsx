@@ -24,6 +24,7 @@ const initialState = {
   RGB: [0, 0, 0, 1],
   LCH: [0, 0, 0, 1],
   RGB_CSS_8: 'rgb(0, 0, 0)',
+  RGB_CSS_8_OPAQUE: 'rgb(0, 0, 0)',
   RGB_CSS: 'rgb(0%, 0%, 0%)',
   LCH_CSS: 'lch(0% 0 0)',
   GRADIENT_STOPS: ['black, white', 'black, black', 'black, black', 'transparent, black'],
@@ -179,9 +180,14 @@ const App = ({}) => {
     }
   }, [])
 
+  // store current color (and its 100% opaque version as CSS variables)
+  let currentColor = { '--current-color': state.RGB_CSS_8, '--current-color-opaque': state.RGB_CSS_8_OPAQUE } as React.CSSProperties
   return (
-    <div className="ui">
-      <div className="color-preview" style={{ backgroundColor: state.RGB_CSS }}></div>
+    <div className="ui" style={currentColor}>
+      <div className="color-preview">
+        <div className="color-preview_opaque"></div>
+        <div className="color-preview_transparent"></div>
+      </div>
       <div className="sliders section">
         <Slider 
           min={0} step={1} max={100} name="lightness" value={state.LCH[0]} 

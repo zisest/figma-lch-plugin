@@ -35,5 +35,5 @@
 	border: 2px solid white;
 	box-shadow: rgb(0, 0, 0, 0.2) 0px 0px 0px 0.6px;
   box-sizing: border-box;
-  background: linear-gradient(var(--thumb-color), var(--thumb-color)), white;
+  background: linear-gradient(var(--current-color), var(--current-color)), white;
 }
