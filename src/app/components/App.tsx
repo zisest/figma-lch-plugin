@@ -10,6 +10,7 @@ import Button from './Button'
 import SectionTitle from './SectionTitle'
 import Icon from './Icon'
 import Slider from './Slider'
+import Tooltip from './Tooltip'
 
 declare function require(path: string): any
 
@@ -25,7 +26,8 @@ const initialState = {
   RGB_CSS_8: 'rgb(0, 0, 0)',
   RGB_CSS: 'rgb(0%, 0%, 0%)',
   LCH_CSS: 'lch(0% 0 0)',
-  GRADIENT_STOPS: ['black, white', 'black, black', 'black, black', 'transparent, black']
+  GRADIENT_STOPS: ['black, white', 'black, black', 'black, black', 'transparent, black'],
+  IS_WITHIN_SRGB: true
 }
 
 const App = ({}) => {
@@ -38,17 +40,22 @@ const App = ({}) => {
   // Settings from plugin's clientStorage
   const [autoRepaint, setAutoRepaint] = useState(false)
 
-
-
-  function paintSelection () {
-    parent.postMessage({ pluginMessage: { type: 'paint-selection', message: { color: state.RGB } } }, '*')
+  // *Semi-controlled inputs*
+  // Handle alpha text field values
+  const [alphaFieldValue, setAlphaFieldValue] = useState('100%')
+  useEffect(() => {
+    setAlphaFieldValue(Math.round(state.LCH[3] * 100) + '%')
+  }, [state])
+  const parseAlphaField = e => {
+    if (!/^\d{0,3}%?$/.test(e.target.value)) {
+      e.preventDefault()
+      return
+    }
+    setAlphaFieldValue(e.target.value)
   }
-  function switchAutoRepaint (value: boolean) {
-    console.log('Request controller to change auto-repaint to: ', value)
-    parent.postMessage({ pluginMessage: { type: 'set-auto-repaint', message: { value } } }, '*')
-  }
 
-
+  // *Controlled inputs (handling color)*
+  // These trigger color change:
   const handleLCH = (e) => {
     let initiator: String
 
@@ -98,18 +105,16 @@ const App = ({}) => {
 
   const handleAlpha = (e) => {
     let initiator: String
+    let value = e.target.value
+
     if (e.target.type === 'text') {
       initiator = 'ALPHA'
-
-      if (!/^\d*\.?\d*$/.test(e.target.value)) {
-        e.preventDefault()
-        return
-      }
+      value = Number.parseInt(value) || 0
     } else {
       initiator = 'ALPHA_SLIDER'
     }
     
-    let value = e.target.value / 100
+    value /= 100
 
     parent.postMessage({ pluginMessage: {
        type: 'color-input', 
@@ -138,6 +143,7 @@ const App = ({}) => {
     setter(value)
   }
 
+
   // update css string fields on color change
   useEffect(() => {
     setRGBString(isRGB8Bit ? state.RGB_CSS_8 : state.RGB_CSS)
@@ -145,13 +151,23 @@ const App = ({}) => {
   }, [state, isRGB8Bit])
 
 
-  useEffect(() => {
-    // This is how we read messages sent from the plugin controller
+  // *Sending messages to controller*
+  // Request to fill selection with current color
+  function paintSelection () {
+    parent.postMessage({ pluginMessage: { type: 'paint-selection', message: { color: state.RGB } } }, '*')
+  }
+  function switchAutoRepaint (value: boolean) {
+    console.log('Request controller to change auto-repaint to: ', value)
+    parent.postMessage({ pluginMessage: { type: 'set-auto-repaint', message: { value } } }, '*')
+  }
+
+  // *Handling messages from controller*
+  useEffect(() => {    
     window.onmessage = (event) => {
       const { type, message } = event.data.pluginMessage
       switch (type) {
         case 'color-update':
-          console.log(message.state.GRADIENT_STOPS)
+          console.log(message.state, 'RECEIVED FROM CONTROLLER')
           setState(message.state)
           break
         case 'set-auto-repaint-ui':
@@ -160,55 +176,77 @@ const App = ({}) => {
         default:
           break
       }
-      
     }
   }, [])
 
-
   return (
-    <div>
+    <div className="ui">
       <div className="color-preview" style={{ backgroundColor: state.RGB_CSS }}></div>
-      <Slider 
-        min={0} step={1} max={100} name="lightness" value={state.LCH[0]} 
-        onChange={handleLCH} gradientStops={state.GRADIENT_STOPS[0]} 
-      />
-      <Slider 
-        min={0} step={1} max={132} name="chroma" value={state.LCH[1]} 
-        onChange={handleLCH} gradientStops={state.GRADIENT_STOPS[1]}
-      />
-      <Slider 
-        min={0} step={1} max={360} name="hue" value={state.LCH[2]} 
-        onChange={handleLCH} gradientStops={state.GRADIENT_STOPS[2]} 
-      />
-      <Slider min={0} step={1} max={100} name="alpha"
-       value={Math.round(state.LCH[3] * 100)} 
-       onChange={handleAlpha} gradientStops={state.GRADIENT_STOPS[3]} 
-       thumbColor={state.RGB_CSS_8}
-      />
-      
-      <div className="color-inputs">
-        <Icon text="LCH" />
-        <TextInput name="lightness" value={state.LCH[0]} onChange={handleLCH} />
-        <TextInput name="chroma" value={state.LCH[1]} onChange={handleLCH} />
-        <TextInput name="hue" value={state.LCH[2]} onChange={handleLCH} />
+      <div className="sliders section">
+        <Slider 
+          min={0} step={1} max={100} name="lightness" value={state.LCH[0]} 
+          onChange={handleLCH} gradientStops={state.GRADIENT_STOPS[0]} label="L"
+        />
+        <Slider 
+          min={0} step={1} max={132} name="chroma" value={state.LCH[1]} 
+          onChange={handleLCH} gradientStops={state.GRADIENT_STOPS[1]} label="C"
+        />
+        <Slider 
+          min={0} step={1} max={360} name="hue" value={state.LCH[2]} 
+          onChange={handleLCH} gradientStops={state.GRADIENT_STOPS[2]} label="H" 
+        />
+        <div className="alpha-block">
+          <Slider 
+            min={0} step={1} max={100} name="alpha"
+            value={Math.round(state.LCH[3] * 100)} 
+            onChange={handleAlpha} gradientStops={state.GRADIENT_STOPS[3]} label="A"
+            thumbColor={state.RGB_CSS_8}
+          />
+          <TextInput 
+            name="alpha" value={alphaFieldValue} onBlur={handleAlpha} 
+            onChange={parseAlphaField} 
+          />
+        </div>
       </div>
-      <div className="color-inputs">
-        <Icon text="RGB" />
-        <TextInput name="red" value={Math.round(state.RGB[0] * 255)} onChange={handleRGB} />
-        <TextInput name="green" value={Math.round(state.RGB[1] * 255)} onChange={handleRGB} />
-        <TextInput name="blue" value={Math.round(state.RGB[2] * 255)} onChange={handleRGB} />
-      </div>
-      <TextInput name="alpha" value={Math.round(state.LCH[3] * 100)} onChange={handleAlpha} />
-      <SectionTitle>CSS strings</SectionTitle>
-      <TextInput value={LCHString} onChange={handleCSSFields} name="lch-css"/>
-      <TextInput value={RGBString} onChange={handleCSSFields} name="rgb-css"/>
-
       
-      <IconButton onClick={() => setIsRGB8Bit(prev => !prev)} iconName="swap" />
+      <div className="section">
+        <div className="color-inputs">
+          <div className="label">LCH</div>
+          <TextInput name="lightness" value={state.LCH[0]} onChange={handleLCH} />
+          <TextInput name="chroma" value={state.LCH[1]} onChange={handleLCH} />
+          <TextInput name="hue" value={state.LCH[2]} onChange={handleLCH} />
+        </div>
+        <div className="color-inputs">
+          <div className="label">RGB</div>
+          <TextInput name="red" value={Math.round(state.RGB[0] * 255)} onChange={handleRGB} />
+          <TextInput name="green" value={Math.round(state.RGB[1] * 255)} onChange={handleRGB} />
+          <TextInput name="blue" value={Math.round(state.RGB[2] * 255)} onChange={handleRGB} />
+          {!state.IS_WITHIN_SRGB && 
+            <Tooltip text="Color value is outside sRGB gamut" onRight>
+              <Icon color="red" iconName="warning" />
+            </Tooltip>
+          }
+        </div>
+      </div>
+      
+      <div className="section">
+        <SectionTitle>CSS strings</SectionTitle>
+        <div className="css-string">
+          <TextInput value={LCHString} onChange={handleCSSFields} name="lch-css"/>
+        </div>
+        <div className="css-string css-string__rgb">
+          <TextInput value={RGBString} onChange={handleCSSFields} name="rgb-css"/>      
+          <IconButton onClick={() => setIsRGB8Bit(prev => !prev)} iconName="swap" />
+        </div>
+      </div>
+      
+      
 
-      <br></br>
-      <Button onClick={paintSelection} disabled={autoRepaint}>Paint selection</Button>
-      <Checkbox label="Auto-repaint" checked={autoRepaint} onChange={() => switchAutoRepaint(!autoRepaint)} id="input_auto-repaint" />
+      <div className="section">
+        <Button onClick={paintSelection} disabled={autoRepaint}>Paint selection</Button>
+        <Checkbox label="Auto-repaint" checked={autoRepaint} onChange={() => switchAutoRepaint(!autoRepaint)} id="input_auto-repaint" />
+      </div>
+      
     </div>
   )
 }

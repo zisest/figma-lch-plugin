@@ -1,12 +1,33 @@
-
-
 * {
   cursor: default;
+}
+
+.ui {
 }
 .color-preview {
   height: 40px;
 }
+.sliders {
+
+}
+
 .color-inputs {
   display: grid;
-  grid-template-columns: min-content repeat(3, 50px);
+  grid-template-columns: min-content repeat(3, 50px) min-content;
+}
+.alpha-block {
+  display: grid;
+  grid-template-columns: 1fr 46px;
+}
+
+.css-string__rgb {
+  display: grid;
+  grid-template-columns: 1fr min-content;
+}
+
+.section {
+  padding: 8px;
+}
+.section:not(:last-child) {
+  border-bottom: 1px solid #efefef;
 }

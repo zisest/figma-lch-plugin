@@ -13,7 +13,7 @@ import {
 
 // *Plugin startup*
 console.log('%c STARTUP', 'color: orange')
-figma.showUI(__html__, { width: 240, height: 500 })
+figma.showUI(__html__, { width: 240, height: 550/*486*/ })
 
 // Setting AUTO_REPAINT from clientStorage
 let AUTO_REPAINT = false
@@ -87,7 +87,8 @@ function colorsToStrings (RGB: [number, number, number, number], LCH: [number, n
 function getFullColorData (from, value, prevState = null) {
   let RGB: [number, number, number, number], 
   LCH: [number, number, number, number], 
-  GRADIENT_STOPS: [string, string, string, string]
+  GRADIENT_STOPS: [string, string, string, string],
+  IS_WITHIN_SRGB: boolean
 
   switch (from) {
     case 'RGB':
@@ -97,7 +98,8 @@ function getFullColorData (from, value, prevState = null) {
     case 'LCH':
     case 'LCH_SLIDER':
       LCH = value
-      RGB = LCH_to_sRGB_values(...LCH, true)
+      ;({ RGB, IS_WITHIN_SRGB } = LCH_to_sRGB_values(...LCH, true))
+      console.log({IS_WITHIN_SRGB}, 'controller case')
       break
     case 'RGB_CSS':
       RGB = sRGB_string_to_sRGB(value)
@@ -105,7 +107,7 @@ function getFullColorData (from, value, prevState = null) {
       break
     case 'LCH_CSS':
       LCH = LCH_string_to_LCH(value)
-      RGB = LCH_to_sRGB_values(...LCH, true)
+      ;({ RGB, IS_WITHIN_SRGB } = LCH_to_sRGB_values(...LCH, true))
       break
     case 'ALPHA':
     case 'ALPHA_SLIDER':
@@ -124,9 +126,13 @@ function getFullColorData (from, value, prevState = null) {
   let strings = colorsToStrings(RGB, LCH)
   // Generate gradient stops for sliders
   GRADIENT_STOPS ||= getGradientStops(LCH[0], LCH[1], LCH[2])
+  // Setting IS_WITHIN_SRGB if not already defined
+  console.log({IS_WITHIN_SRGB}, 'case before ??=')
+  IS_WITHIN_SRGB ??= true
+  
 
   let newState = {
-    RGB, LCH, ...strings, GRADIENT_STOPS
+    RGB, LCH, ...strings, GRADIENT_STOPS, IS_WITHIN_SRGB
   }
 
   return newState

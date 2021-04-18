@@ -1,7 +1,14 @@
+.slider-label {
+  display: flex
+}
+
+.height-28 {
+  height: 28px;
+}
 .slider-container {
   box-sizing: border-box;
   height: 28px;
-  width: 184px;
+  width: 100%;
   padding: 8px 8px;
 }
 

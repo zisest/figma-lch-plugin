@@ -58,9 +58,14 @@ export function LCH_string_to_LCH(LCHString: String) {
 
   // Check if Alpha values is in percent or decimal
   if (a != undefined) {
-    if (LCHString[LCHString.length - 2] === '%') a = a / 100
+    if (LCHString[LCHString.length - 2] === '%') 
+      a = Math.round(a) / 100
+    else 
+      a = Math.round(a * 100) / 100
   } else a = 1
 
+  ;[l, c, h] = [l, c, h].map(v => Math.round(v))
+  
   check_LCH_bounds(l, c, h, a)
 
   return <[number, number, number, number]>[l, c, h, a]
@@ -75,7 +80,7 @@ function check_sRGB_bounds(r, g, b, a) {
 export function sRGB_to_sRGB_string(r: Number, g: Number, b: Number, a = 1, only8bit: Boolean, checkBounds = true) {
   if (checkBounds) check_sRGB_bounds(r, g, b, a)
 
-  const toString = only8bit ? (v) => Math.round(v * 2550) / 10 : (v) => Math.round(v * 10000) / 100 + '%'
+  const toString = only8bit ? (v) => Math.round(v * 255) : (v) => Math.round(v * 10000) / 100 + '%'
 
   return `rgb(${toString(r)}, ${toString(g)}, ${toString(b)}${alpha_to_sRGB_string(a)})`
 }
@@ -106,17 +111,19 @@ export function sRGB_string_to_sRGB(sRGBString: String) {
 
 export function LCH_to_sRGB_values(l: number, c: number, h: number, a: number = 1, forceInGamut = false) {
   check_LCH_bounds(l, c, h, a)
+  let is_within_sRGB: boolean
 
   if (forceInGamut) {
-    ;[l, c, h] = force_into_gamut(l, c, h)
+    ;[l, c, h, is_within_sRGB] = force_into_gamut(l, c, h)
   }
-  let sRGB = [...LCH_to_sRGB([l, c, h]), a].map(v => Math.round(v * 100) / 100)
-  return <[number, number, number, number]>sRGB
+  let sRGB = [...LCH_to_sRGB([l, c, h]), a].map(v => Math.round(v * 100) / 100) as [number, number, number, number]
+  console.log({is_within_sRGB})
+  return { RGB: sRGB, IS_WITHIN_SRGB: is_within_sRGB }
 }
 export function sRGB_to_LCH_values(r: number, g: number, b: number, a: number = 1) {
   check_sRGB_bounds(r, g, b, a)
 
-  let LCH = [...sRGB_to_LCH([r, g, b]), a].map(v => Math.round(v * 100) / 100)
+  let LCH = [...sRGB_to_LCH([r, g, b]), a].map(v => Math.round(v))
   return <[number, number, number, number]>LCH
 }
 
@@ -127,7 +134,7 @@ function force_into_gamut(l, c, h) {
   // and adjusting the c via binary-search
   // until the color is on the sRGB boundary.
   if (isLCH_within_sRGB(l, c, h)) {
-    return [l, c, h]
+    return [l, c, h, true]
   }
 
   let hiC = c
@@ -145,7 +152,7 @@ function force_into_gamut(l, c, h) {
     c = (hiC + loC) / 2
   }
 
-  return [l, c, h]
+  return [l, c, h, false]
 }
 
 export function isLCH_within_sRGB(l, c, h) {
@@ -166,10 +173,12 @@ export function slider_stops(range, l, c, h, a, index) {
   return range
     .map((x) => {
       let forceInGamut = false // don't force into sRGB gamut & don't check if is inside (0,1) bounds
-      let args = [l, c, h, a]
+
+      let args: [number, number, number, number] = [l, c, h, a]
       args[index] = x
-      let [l1, c1, h1, a1] = args
-      return sRGB_to_sRGB_string(...LCH_to_sRGB_values(l1, c1, h1, a1, forceInGamut), true, forceInGamut)
+      
+      let { RGB } = LCH_to_sRGB_values(...args, forceInGamut)
+      return sRGB_to_sRGB_string(...RGB, true, forceInGamut)
     })
     .join(', ')
 }

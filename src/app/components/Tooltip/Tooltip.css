@@ -1,0 +1,44 @@
+.tooltip-wrapper {
+  /*display: contents; *//* inadequate for getting getBoundingClientRect() */
+  display: inline-block;
+}
+
+.tooltip {
+  display: none;
+  position: absolute;
+}
+.tooltip__visible {
+  display: block;
+}
+
+.tooltip::before {
+  content: '';
+  position: absolute;
+  width: 0; 
+  height: 0; 
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;  
+  border-bottom: 5px solid #050505;
+
+  top: -5px;
+}
+.tooltip__left::before {
+  left: var(--arrow-pos)
+}
+.tooltip__right::before {
+  right: var(--arrow-pos)
+}
+
+.tooltip_content {
+  position: relative;
+  padding: 6px 8px;
+  background: #050505;
+  color: #fff;
+  z-index: 12;
+  border-radius: 2px;
+  white-space: pre-wrap;
+  box-shadow: 0 2px 7px rgba(0,0,0,.15);
+  word-break: break-word;
+
+  font-size: 11px;
+}
