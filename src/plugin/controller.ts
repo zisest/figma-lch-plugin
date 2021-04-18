@@ -13,7 +13,7 @@ import {
 
 // *Plugin startup*
 console.log('%c STARTUP', 'color: orange')
-figma.showUI(__html__, { width: 240, height: 550/*486*/ })
+figma.showUI(__html__, { width: 240, height: 486 })
 
 // Setting AUTO_REPAINT from clientStorage
 let AUTO_REPAINT = false
@@ -58,9 +58,11 @@ figma.ui.onmessage = (msg) => {
 
     let response = {      
       type: 'color-update'
-    }
-   
+    }   
+
     let newState = getFullColorData(initiator, value, prevState)
+    initiator += '_CALC'
+    console.log(newState, 'right before sending from controller')
     figma.ui.postMessage({ ...response, message: { initiator, state: newState } })
 
     if (AUTO_REPAINT) fillSelection(figma.currentPage.selection, ...newState.RGB)    
@@ -97,10 +99,12 @@ function getFullColorData (from, value, prevState = null) {
       LCH = sRGB_to_LCH_values(...RGB)
       break
     case 'LCH':
-    case 'LCH_SLIDER':
+    case 'L_SLIDER':
+    case 'C_SLIDER':
+    case 'H_SLIDER':
       LCH = value
+      console.log({ LCH }, 'controller switch')
       ;({ RGB, IS_WITHIN_SRGB } = LCH_to_sRGB_values(...LCH, true))
-      console.log({IS_WITHIN_SRGB}, 'controller case')
       break
     case 'RGB_CSS':
       RGB = sRGB_string_to_sRGB(value)
@@ -117,6 +121,7 @@ function getFullColorData (from, value, prevState = null) {
       RGB[3] = value
       LCH[3] = value
       GRADIENT_STOPS = prevState.GRADIENT_STOPS
+      IS_WITHIN_SRGB = prevState.IS_WITHIN_SRGB
       break
     default:
       throw 'default @ getFullColorData: ' + from
@@ -128,7 +133,7 @@ function getFullColorData (from, value, prevState = null) {
   // Generate gradient stops for sliders
   GRADIENT_STOPS ||= getGradientStops(LCH[0], LCH[1], LCH[2])
   // Setting IS_WITHIN_SRGB if not already defined
-  console.log({IS_WITHIN_SRGB}, 'case before ??=')
+  //console.log({IS_WITHIN_SRGB}, 'case before ??=')
   IS_WITHIN_SRGB ??= true
   
 

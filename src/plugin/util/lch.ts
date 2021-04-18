@@ -27,10 +27,10 @@ const A_MAX = 1
 
 // Alpha value to string
 function alpha_to_sRGB_string(a = 1) {
-  return a < 1 ? `, ${a}` : ''
+  return a < 1 ? `, ${Math.round(a * 100) / 100}` : ''
 }
 function alpha_to_LCH_string(a = 1) {
-  return a < 1 ? ` / ${a}` : ''
+  return a < 1 ? ` / ${Math.round(a * 100) / 100}` : ''
 }
 
 function check_LCH_bounds(l, c, h, a) {
@@ -117,13 +117,13 @@ export function LCH_to_sRGB_values(l: number, c: number, h: number, a: number = 
     ;[l, c, h, is_within_sRGB] = force_into_gamut(l, c, h)
   }
   let sRGB = [...LCH_to_sRGB([l, c, h]), a].map(v => Math.round(v * 100) / 100) as [number, number, number, number]
-  console.log({is_within_sRGB})
+  //console.log({is_within_sRGB})
   return { RGB: sRGB, IS_WITHIN_SRGB: is_within_sRGB }
 }
 export function sRGB_to_LCH_values(r: number, g: number, b: number, a: number = 1) {
   check_sRGB_bounds(r, g, b, a)
 
-  let LCH = [...sRGB_to_LCH([r, g, b]), a].map(v => Math.round(v))
+  let LCH = [...sRGB_to_LCH([r, g, b]).map(v => Math.round(v)), a]
   return <[number, number, number, number]>LCH
 }
 
