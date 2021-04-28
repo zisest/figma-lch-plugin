@@ -10,24 +10,84 @@ import {
 } from './util/lch'
 
 
+try {
+  // *Plugin startup*
+  console.log('%c STARTUP', 'color: orange')
+  figma.showUI(__html__, { width: 240, height: 455 })
 
-// *Plugin startup*
-console.log('%c STARTUP', 'color: orange')
-figma.showUI(__html__, { width: 240, height: 455 })
-
-// Setting AUTO_REPAINT from clientStorage
-let AUTO_REPAINT = false
-figma.clientStorage.getAsync('AUTO_REPAINT').then(res => {
-  if (res != undefined) AUTO_REPAINT = res
-  figma.ui.postMessage({
-    type: 'set-auto-repaint-ui',
-    message: { value: res },
+  // Setting AUTO_REPAINT from clientStorage
+  let AUTO_REPAINT = false
+  figma.clientStorage.getAsync('AUTO_REPAINT').then(res => {
+    if (res != undefined) AUTO_REPAINT = res
+    figma.ui.postMessage({
+      type: 'set-auto-repaint-ui',
+      message: { value: res },
+    })
   })
-})
+
+  // Check if something is selected on startup => use that fill color
+  // and disable/enable 'Pick color' button
+  handleSelection()
+  // On selection change => update color
+  // and disable/enable 'Pick color' button
+  figma.on('selectionchange', () => {  
+    handleSelection()
+  })
+
+  figma.ui.onmessage = (msg) => {
+    // *Settings*
+    // AUTO_REPAINT
+    if (msg.type === 'set-auto-repaint') {
+      let { value } = msg.message
+      figma.clientStorage.setAsync('AUTO_REPAINT', value)
+      AUTO_REPAINT = value
+
+      figma.ui.postMessage({
+        type: 'set-auto-repaint-ui',
+        message: { value },
+      })
+    }
+
+    // *Main*
+    // Color input from UI
+    if (msg.type === 'color-input') {
+      let { initiator, value, prevState } = msg.message
+
+      let response = {      
+        type: 'color-update'
+      }   
+
+      let newState = getFullColorData(initiator, value, prevState)
+      initiator += '_CALC'
+      console.log(newState, 'right before sending from controller')
+      figma.ui.postMessage({ ...response, message: { initiator, state: newState } })
+
+      if (AUTO_REPAINT) fillSelection(figma.currentPage.selection, ...newState.RGB)    
+    }
+
+    // Fill selection with color when requested
+    if (msg.type === 'paint-selection') {
+      let [r, g, b, a] = msg.message.color
+      fillSelection(figma.currentPage.selection, r, g, b, a)    
+    }
+
+    // Pick color from selection
+    if (msg.type === 'pick-from-selection') {
+      setColorFromSelection(figma.currentPage.selection)  
+    }
+
+  }
 
 
 
-// *Selection*
+} catch (err) {
+  // Not handling errors totally on purpose
+  console.error(err)
+}
+
+
+
+// Check if selection is valid & update the color
 function handleSelection () {
   let { selection } = figma.currentPage
   let selectionValid = setColorFromSelection(selection) && selection.length === 1
@@ -37,62 +97,6 @@ function handleSelection () {
     message: { value: selectionValid },
   })
 }
-// Check if something is selected on startup => use that fill color
-// and disable/enable 'Pick color' button
-handleSelection()
-// On selection change => update color
-// and disable/enable 'Pick color' button
-figma.on('selectionchange', () => {  
-  handleSelection()
-})
-
-
-
-figma.ui.onmessage = (msg) => {
-  // *Settings*
-  // AUTO_REPAINT
-  if (msg.type === 'set-auto-repaint') {
-    let { value } = msg.message
-    figma.clientStorage.setAsync('AUTO_REPAINT', value)
-    AUTO_REPAINT = value
-
-    figma.ui.postMessage({
-      type: 'set-auto-repaint-ui',
-      message: { value },
-    })
-  }
-
-  // *Main*
-  // Color input from UI
-  if (msg.type === 'color-input') {
-    let { initiator, value, prevState } = msg.message
-
-    let response = {      
-      type: 'color-update'
-    }   
-
-    let newState = getFullColorData(initiator, value, prevState)
-    initiator += '_CALC'
-    console.log(newState, 'right before sending from controller')
-    figma.ui.postMessage({ ...response, message: { initiator, state: newState } })
-
-    if (AUTO_REPAINT) fillSelection(figma.currentPage.selection, ...newState.RGB)    
-  }
-
-  // Fill selection with color when requested
-  if (msg.type === 'paint-selection') {
-    let [r, g, b, a] = msg.message.color
-    fillSelection(figma.currentPage.selection, r, g, b, a)    
-  }
-
-  // Pick color from selection
-  if (msg.type === 'pick-from-selection') {
-    setColorFromSelection(figma.currentPage.selection)  
-  }
-
-
-}
-
 
 // Calculate color sets
 function colorsToStrings (RGB: [number, number, number, number], LCH: [number, number, number, number]) {  
