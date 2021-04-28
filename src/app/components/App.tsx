@@ -314,10 +314,10 @@ const App = ({}) => {
       <div className="section">
         <SectionTitle>CSS strings</SectionTitle>
         <div className="css-string">
-          <TextInput value={LCHString} onChange={handleCSSFields} name="lch-css"/>
+          <TextInput value={LCHString} onChange={handleCSSFields} name="lch-css" withCopyBtn />
         </div>
         <div className="css-string css-string__rgb">
-          <TextInput value={RGBString} onChange={handleCSSFields} name="rgb-css"/>      
+          <TextInput value={RGBString} onChange={handleCSSFields} name="rgb-css" withCopyBtn />      
           <IconButton onClick={() => setIsRGB8Bit(prev => !prev)} iconName="swap" />
         </div>
       </div>

@@ -50,6 +50,7 @@
 .css-string__rgb {
   display: grid;
   grid-template-columns: 1fr min-content;
+  gap: 4px;
 }
 
 .section {
