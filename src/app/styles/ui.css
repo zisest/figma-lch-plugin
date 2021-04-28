@@ -39,7 +39,8 @@
 
 .color-inputs {
   display: grid;
-  grid-template-columns: min-content repeat(3, 50px) min-content;
+  grid-template-columns: min-content 1fr min-content;
+  gap: 8px;
 }
 .alpha-block {
   display: grid;

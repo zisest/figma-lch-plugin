@@ -12,6 +12,7 @@ import SectionTitle from './SectionTitle'
 import Icon from './Icon'
 import Slider from './Slider'
 import Tooltip from './Tooltip'
+import TextInputGroup from './TextInputGroup'
 
 declare function require(path: string): any
 
@@ -288,15 +289,20 @@ const App = ({}) => {
       <div className="section">
         <div className="color-inputs">
           <div className="label">LCH</div>
-          <TextInput name="L" value={state.LCH[0]} onChange={(e) => handleLCH(e, state)} />
-          <TextInput name="C" value={state.LCH[1]} onChange={(e) => handleLCH(e, state)} />
-          <TextInput name="H" value={state.LCH[2]} onChange={(e) => handleLCH(e, state)} />
+          <TextInputGroup>
+            <TextInput name="L" value={state.LCH[0]} onChange={(e) => handleLCH(e, state)} />
+            <TextInput name="C" value={state.LCH[1]} onChange={(e) => handleLCH(e, state)} />
+            <TextInput name="H" value={state.LCH[2]} onChange={(e) => handleLCH(e, state)} />
+          </TextInputGroup>          
         </div>
         <div className="color-inputs">
           <div className="label">RGB</div>
-          <TextInput name="red" value={Math.round(state.RGB[0] * 255)} onChange={handleRGB} />
-          <TextInput name="green" value={Math.round(state.RGB[1] * 255)} onChange={handleRGB} />
-          <TextInput name="blue" value={Math.round(state.RGB[2] * 255)} onChange={handleRGB} />
+          <TextInputGroup>
+            <TextInput name="red" value={Math.round(state.RGB[0] * 255)} onChange={handleRGB} />
+            <TextInput name="green" value={Math.round(state.RGB[1] * 255)} onChange={handleRGB} />
+            <TextInput name="blue" value={Math.round(state.RGB[2] * 255)} onChange={handleRGB} />
+          </TextInputGroup>          
+          
           {!state.IS_WITHIN_SRGB && 
             <Tooltip text="Color value is outside sRGB gamut" onRight>
               <Icon color="red" iconName="warning" />

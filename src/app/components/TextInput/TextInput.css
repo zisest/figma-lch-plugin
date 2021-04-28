@@ -20,10 +20,10 @@
   border: 1px solid transparent;
   border-radius: var(--border-radius-small);
   outline: none;
-  background-color: var(--white);
+  background-color: transparent;
 }
 
-.input__field:hover, .input__field:placeholder-shown:hover {
+.input__field:hover {
   color: var(--black8);
   border: 1px solid var(--black1);
   background-image: none;
