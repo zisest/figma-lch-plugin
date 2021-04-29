@@ -280,7 +280,7 @@ const App = ({}) => {
             onChange={handleAlphaSlider} gradientStops={state.GRADIENT_STOPS[3]} label="A"
           />
           <TextInput 
-            name="alpha" value={alphaFieldValue} onBlur={handleAlpha} 
+            name="alpha" value={alphaFieldValue} onBlur={e => handleAlpha(e, state)} 
             onChange={parseAlphaField} 
           />
         </div>
