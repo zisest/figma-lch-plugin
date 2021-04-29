@@ -1,5 +1,5 @@
 import React, { useEffect, useReducer, useState, useRef } from 'react'
-import { debounce, throttle } from 'throttle-debounce'
+import { throttle } from 'throttle-debounce'
 
 import '../styles/variables.css'
 import '../styles/ui.css'
@@ -66,11 +66,12 @@ function reducer (state, action) {
 
   }
 }
-
+/*
 const useDebounce = (delay, fn) => {
   const debounced = useRef(debounce(delay, fn))
   return debounced.current
 }
+*/
 
 const useThrottle = (delay, fn) => {
   const throttled = useRef(throttle(delay, fn))
@@ -95,11 +96,12 @@ const App = ({}) => {
     setAlphaFieldValue(Math.round(state.LCH[3] * 100) + '%')
   }, [state])
   const parseAlphaField = e => {
-    if (!/^\d{0,3}%?$/.test(e.target.value)) {
+    let { value } = e.target
+    if (!/^\d{0,3}%?$/.test(value) || Number.parseInt(value) > 100) {
       e.preventDefault()
       return
     }
-    setAlphaFieldValue(e.target.value)
+    setAlphaFieldValue(value)
   }
 
   
@@ -109,11 +111,29 @@ const App = ({}) => {
   // LCH
   const handleLCH = (e, currentState) => {
     let initiator: String
+    let { value, name } = e.target
+
+    const LCH_MAP = {
+      L: {
+        index: 0,
+        maxValue: 100,
+      },
+      C: {
+        index: 1,
+        maxValue: 132,
+      },
+      H: {
+        index: 2,
+        maxValue: 360
+      }
+    }
+
+    let { index, maxValue } = LCH_MAP[name]
 
     if (e.target.type === 'text') {
       initiator = 'LCH'
 
-      if (!/\d*\.?\d*/.test(e.target.value)) {
+      if (!/^\d*$/.test(value) || value > maxValue ) {
         e.preventDefault()
         return
       }
@@ -121,15 +141,11 @@ const App = ({}) => {
       initiator = e.target.name + '_SLIDER'
     }
 
-    const LCH_MAP = {
-      L: 0,
-      C: 1,
-      H: 2
-    }
-    console.log('%c', 'color: green', LCH_MAP[e.target.name])
-    let v = Number(e.target.value)    
+    
+    console.log('%c', 'color: green', index)
+    let v = Number(value)    
     let lch = [...currentState.LCH]
-    lch[LCH_MAP[e.target.name]] = v
+    lch[index] = v
     console.log('CLient sending LCH to controller', lch)
     parent.postMessage({ pluginMessage: { type: 'color-input', message: { initiator, value: lch } } }, '*')
   }
@@ -169,7 +185,9 @@ const App = ({}) => {
 
   // RGB
   const handleRGB = (e) => {    
-    if (!/^\d*\.?\d*$/.test(e.target.value)) {
+    let { value } = e.target
+    
+    if (!/^\d*$/.test(value) || value > 255) {
       e.preventDefault()
       return
     }

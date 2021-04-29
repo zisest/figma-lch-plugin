@@ -81,7 +81,6 @@ try {
 
 
 } catch (err) {
-  // Not handling errors totally on purpose
   console.error(err)
 }
 
