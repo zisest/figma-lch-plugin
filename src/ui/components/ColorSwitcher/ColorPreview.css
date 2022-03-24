@@ -1,0 +1,49 @@
+.color-preview {  
+  height: 40px;
+  width: 100%;  
+  position: relative;
+}
+
+.color-preview_opaque {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  clip-path: polygon(0 0, 0% 100%, 100% 0);
+}
+
+.color-preview_transparent::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  background: var(--transparency-large)
+}
+
+.color-preview_transparent {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.color-preview_gradient::before {
+  content: url('../../assets/gradient-arrow.svg');
+  width: 16px;
+  height: 16px;
+  z-index: 1;
+  position: absolute;
+  top: calc(50% - 8px);
+  left: -8px;
+}
+
+.color-preview_selected::after {
+  content: '';
+  position: absolute;
+  /* TODO: could switch to inset propery and ignore Safari < 14.1? PostCSS? */
+  bottom: -4px; 
+  left: 5%;
+  right: 5%;
+  border-bottom: 2px solid var(--black8-opaque);
+}

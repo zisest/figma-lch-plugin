@@ -620,5 +620,7 @@ copy of the Program in return for a fee.
 
                      END OF TERMS AND CONDITIONS
 
+This software includes material copied from or derived from "CSS Color Module Level 4 Editor's Draft" (https://drafts.csswg.org/css-color-4/). Copyright © 2022 W3C® (MIT, ERCIM, Keio, Beihang).
+
 Figma LCH color picker plugin
-Copyright (C) 2021 Nikita Antonov
+Copyright (C) 2022 Nikita Antonov

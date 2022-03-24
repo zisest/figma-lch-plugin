@@ -1,21 +1,21 @@
 {
-    "name": "figma-plugin-react-template",
-    "version": "1.0.0",
-    "description": "This plugin template uses Typescript. If you are familiar with Javascript, Typescript will look very familiar. In fact, valid Javascript code is already valid Typescript code.",
-    "license": "ISC",
+    "name": "figma-lch-plugin",
+    "version": "2.0.0",
+    "description": "A simple color picker plugin for Figma that utilizes the LCH color space",
+    "license": "GPL-3.0-or-later",
     "scripts": {
         "build": "webpack --mode=production",
         "build:watch": "webpack --mode=development --watch",
-        "prettier:format": "prettier --write 'src/**/*.{js,jsx,ts,tsx,css,json}' "
+        "prettier:format": "prettier --write 'src/**/*.{js,jsx,ts,tsx,css,json}'"
     },
     "dependencies": {
         "clsx": "^1.1.1",
         "react": "^17.0.1",
         "react-dom": "^17.0.1",
-        "throttle-debounce": "^3.0.1"
+        "tslib": "^2.3.1"
     },
     "devDependencies": {
-        "@figma/plugin-typings": "^1.19.0",
+        "@figma/plugin-typings": "^1.41.1",
         "@types/react": "^17.0.0",
         "@types/react-dom": "^17.0.0",
         "css-loader": "^5.0.1",

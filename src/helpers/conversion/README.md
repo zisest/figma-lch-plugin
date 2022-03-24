@@ -1,0 +1,1 @@
+This software includes material copied from or derived from "CSS Color Module Level 4 Editor's Draft" (https://drafts.csswg.org/css-color-4/). Copyright © 2022 W3C® (MIT, ERCIM, Keio, Beihang).

@@ -1,0 +1,13 @@
+.color-switcher {
+  width: 100%;
+  display: flex;
+  position: relative;
+}
+
+.color-switcher::after {
+  content: '';
+  box-shadow: inset 0px -5px 8px 0px #48484810;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
