@@ -1,1 +1,0 @@
-export function throttle<T extends CallableFunction> (delay: number, fn: T): T
