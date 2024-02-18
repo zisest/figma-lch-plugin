@@ -42,3 +42,9 @@
   justify-content: space-around;
   padding-top: 16px;
 }
+
+
+.checkboxes {
+  display: flex;
+  
+}

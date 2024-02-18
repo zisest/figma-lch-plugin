@@ -1,10 +1,10 @@
-import React, { ChangeEventHandler } from 'react'
+import React from 'react'
 
 import './Checkbox.css'
 
 type PropTypes = {
   checked: boolean,
-  onChange: ChangeEventHandler<HTMLInputElement>,
+  onChange: (v: boolean) => void,
   id: string,
   label: string
 }
@@ -12,7 +12,7 @@ type PropTypes = {
 function Checkbox ({ checked, onChange, id, label }: PropTypes) {
   return (
     <div className="checkbox">
-      <input className="checkbox__box" id={id} type="checkbox" checked={checked} onChange={onChange} />
+      <input className="checkbox__box" id={id} type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} />
       <label className="checkbox__label" htmlFor={id}>{label}</label>
     </div>
   )

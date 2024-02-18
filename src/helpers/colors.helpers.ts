@@ -1,5 +1,5 @@
 import { Color, GetFullColorData, GradientStops } from '../types'
-import { LCH_to_sRGB, sRGB_to_LCH } from './conversion/utilities.helpers.js'
+import { LCH_to_sRGB, sRGB_to_LCH, sRGB_to_OKLCH, OKLCH_to_sRGB } from './conversion/utilities.helpers.js'
 
 // *sRGB*:
 // MAIN:
@@ -30,6 +30,7 @@ const A_MAX = 1
 function alpha_to_sRGB_string(a = 1) {
   return a < 1 ? `, ${Math.round(a * 100) / 100}` : ''
 }
+
 function alpha_to_LCH_string(a = 1) {
   return a < 1 ? ` / ${Math.round(a * 100) / 100}` : ''
 }
@@ -49,6 +50,7 @@ export function LCH_to_LCH_string(l: number, c: number, h: number, a = 1) {
 
   return `lch(${l}% ${c} ${h}${alpha_to_LCH_string(a)})`
 }
+
 export function LCH_string_to_LCH(LCHString: string) {
   if (LCHString.slice(0, 3).toLowerCase() !== 'lch') throw 'Incorrect LCH string format! (1)'
 
@@ -60,14 +62,15 @@ export function LCH_string_to_LCH(LCHString: string) {
 
   // Check if Alpha values is in percent or decimal
   if (a != undefined) {
-    if (LCHString[LCHString.length - 2] === '%') 
+    if (LCHString[LCHString.length - 2] === '%')
       a = Math.round(a) / 100
-    else 
+    else
       a = Math.round(a * 100) / 100
   } else a = 1
 
-  ;[l, c, h] = [l, c, h].map(v => Math.round(v))
-  
+  ;
+  [l, c, h] = [l, c, h].map(v => Math.round(v))
+
   check_LCH_bounds(l, c, h, a)
 
   return <Color>[l, c, h, a]
@@ -79,6 +82,7 @@ function check_sRGB_bounds(r: number, g: number, b: number, a: number) {
   if (b < 0 || b > 1) throw 'Incorrect sRGB value! (b is out of [0,1] interval): ' + b
   if (a < 0 || a > 1) throw 'Incorrect sRGB value! (a is out of [0,1] interval): ' + a
 }
+
 export function sRGB_to_sRGB_string(r: number, g: number, b: number, a = 1, only8bit: boolean, checkBounds = true) {
   if (checkBounds) check_sRGB_bounds(r, g, b, a)
 
@@ -86,6 +90,7 @@ export function sRGB_to_sRGB_string(r: number, g: number, b: number, a = 1, only
 
   return `rgb(${toString(r)}, ${toString(g)}, ${toString(b)}${alpha_to_sRGB_string(a)})`
 }
+
 export function sRGB_string_to_sRGB(sRGBString: string) {
   if (!sRGBString || !sRGBString.length) throw 'Incorrect sRGB string format! (0)'
   if (sRGBString.slice(0, 3).toLowerCase() !== 'rgb') throw 'Incorrect sRGB string format! (1)'
@@ -113,29 +118,29 @@ export function sRGB_string_to_sRGB(sRGBString: string) {
 }
 
 // HEX
-function hex_to_sRGB (hex: string): Color {
+function hex_to_sRGB(hex: string): Color {
   hex = hex.replace('#', '').toUpperCase()
   if (!hex || typeof hex !== 'string' || !hex.length) throw 'Incorrect Hex string format! (0)'
   if (!/^[A-F\d]+$/.test(hex)) throw 'Incorrect Hex string format! (1)'
-  
-  if (hex.length < 3) 
+
+  if (hex.length < 3)
     hex = hex.padStart(6, hex)
-  else if (hex.length < 6) 
+  else if (hex.length < 6)
     hex = hex.slice(0, 3)
   else if (hex.length === 7)
     hex = hex.slice(0, 6)
-  else if (hex.length > 8) 
+  else if (hex.length > 8)
     hex = hex.slice(0, 8)
 
   if (hex.length === 3)
-    hex += hex  
-  
+    hex += hex
+
   const channels = hex.match(/.{2}/g)
   if (!channels || channels.length < 3) throw 'Incorrect Hex string format! (2)'
 
   const values = channels.map(x => parseInt(x, 16) / 255)
   if (values.some(Number.isNaN)) throw 'Incorrect Hex string format! (3)'
-  
+
   let [r, g, b, a] = values
   a ??= 1
 
@@ -143,39 +148,44 @@ function hex_to_sRGB (hex: string): Color {
   return [r, g, b, a]
 }
 
-function sRGB_to_hex (rgb: Color) {
-  check_sRGB_bounds(...rgb)
+function sRGB_to_hex(rgb: Color, checkBounds = true) {
+  if (checkBounds) check_sRGB_bounds(...rgb)
   let values = rgb[3] !== 1 ? rgb : rgb.slice(0, 3)
 
   return '#' + values.map(x => Math.round(x * 255).toString(16).toUpperCase().padStart(2, '0')).join('')
 }
 
 
-export function LCH_to_sRGB_values(l: number, c: number, h: number, a: number = 1, forceInGamut = false) {
+export function LCH_to_sRGB_values(l: number, c: number, h: number, a: number = 1, forceInGamut = false, CIE = true) {
   check_LCH_bounds(l, c, h, a)
   let is_within_sRGB: boolean | undefined
 
   if (forceInGamut) {
-    ;[l, c, h, is_within_sRGB] = force_into_gamut(l, c, h)
+    ;[l, c, h, is_within_sRGB] = force_into_gamut(l, c, h, CIE)
   }
-  let sRGB = [...LCH_to_sRGB([l, c, h]), a].map(v => Math.round(v * 100) / 100) as Color
-  //console.log({is_within_sRGB})
+  const conversionFn = CIE ? LCH_to_sRGB : OKLCH_to_sRGB
+  let sRGB = [...conversionFn([l, c, h]), a] as Color
+  console.log('LCH_to_sRGB_values 0', CIE ? 'cie' : 'ok', { sRGB })
+  sRGB = sRGB.map(v => Math.round(v * 100) / 100)  as Color
+  console.log('LCH_to_sRGB_values', CIE ? 'cie' : 'ok', { sRGB })
   return { RGB: sRGB, IS_WITHIN_SRGB: is_within_sRGB }
 }
-export function sRGB_to_LCH_values(r: number, g: number, b: number, a: number = 1) {
+
+export function sRGB_to_LCH_values(r: number, g: number, b: number, a: number = 1, CIE = true) {
   check_sRGB_bounds(r, g, b, a)
 
-  let LCH = [...sRGB_to_LCH([r, g, b]).map(v => Math.round(v)), a] as Color
+  const conversionFn = CIE ? sRGB_to_LCH : sRGB_to_OKLCH
+  let LCH = [...conversionFn([r, g, b]).map(v => Math.round(v)), a] as Color
   return LCH
 }
 
 
-function force_into_gamut (l: number, c: number, h: number): [number, number, number, boolean] {
+function force_into_gamut(l: number, c: number, h: number, CIE = true): [number, number, number, boolean] {
   // Moves an lch color into the sRGB gamut
   // by holding the l and h steady,
   // and adjusting the c via binary-search
   // until the color is on the sRGB boundary.
-  if (isLCH_within_sRGB(l, c, h)) {
+  if (isLCH_within_sRGB(l, c, h, CIE)) {
     return [l, c, h, true]
   }
 
@@ -186,7 +196,7 @@ function force_into_gamut (l: number, c: number, h: number): [number, number, nu
 
   // .0001 chosen fairly arbitrarily as "close enough"
   while (hiC - loC > ε) {
-    if (isLCH_within_sRGB(l, c, h)) {
+    if (isLCH_within_sRGB(l, c, h, CIE)) {
       loC = c
     } else {
       hiC = c
@@ -197,21 +207,23 @@ function force_into_gamut (l: number, c: number, h: number): [number, number, nu
   return [l, c, h, false]
 }
 
-export function isLCH_within_sRGB(l: number, c: number, h: number) {
-  var rgb = LCH_to_sRGB([+l, +c, +h])
+export function isLCH_within_sRGB(l: number, c: number, h: number, CIE = true) {
+  const conversionFn = CIE ? LCH_to_sRGB : OKLCH_to_sRGB
+  var rgb = conversionFn([+l, +c, +h])
   const ε = 0.000005
   return rgb.reduce((a, b) => a && b >= 0 - ε && b <= 1 + ε, true)
 }
 
 // Generate gradient stops for the sliders
 // (we need to use more to emulate proper interpolation)
-export function range (from: number, to: number, stops: number) {
+export function range(from: number, to: number, stops: number) {
   let step = (to - from) / (stops - 1)
   return Array.from({ length: stops }, (_, i) => i * step)
 }
 
 type NullNumber = number | null
-export function slider_stops(range: number[], l: NullNumber, c: NullNumber, h: NullNumber, a: NullNumber) {
+
+export function slider_stops(range: number[], l: NullNumber, c: NullNumber, h: NullNumber, a: NullNumber, CIE=true ) {
   let args = [l, c, h, a]
   let index = args.findIndex(v => v === null)
   if (index === -1) throw new Error('Incorrect arguments @slider_stops: one of the arguments should be null')
@@ -221,33 +233,35 @@ export function slider_stops(range: number[], l: NullNumber, c: NullNumber, h: N
       let forceInGamut = false // don't force into sRGB gamut & don't check if it's inside (0,1) bounds
       args[index] = x
       const LCH = args as Color
-      
-      let { RGB } = LCH_to_sRGB_values(...LCH, forceInGamut)
+
+      let { RGB } = LCH_to_sRGB_values(...LCH, forceInGamut, CIE)
       return sRGB_to_sRGB_string(...RGB, true, forceInGamut)
     })
     .join(', ')
 }
 
 
-function colorsToStrings (RGB: Color, LCH: Color) {  
+function colorsToStrings(RGB: Color, LCH: Color, RGBis255 = false) {
+  if (RGBis255) RGB = RGB.map(v => v / 255) as Color
   return {
     LCH_CSS: LCH_to_LCH_string(...LCH),
     RGB_CSS: sRGB_to_sRGB_string(...RGB, false),
     RGB_CSS_8: sRGB_to_sRGB_string(...RGB, true),
     RGB_CSS_8_OPAQUE: sRGB_to_sRGB_string(RGB[0], RGB[1], RGB[2], 1, true),
-    HEX_CSS: sRGB_to_hex(RGB)
+    HEX_CSS: sRGB_to_hex(RGB),
   }
 }
 
-// RGB, LCH, ALPHA, LCH_CSS, RGB_CSS, 
+// RGB, LCH, ALPHA, LCH_CSS, RGB_CSS,
 // When using function overloads TS doesn't deduce values' types inside the function propely
 // Same thing when destructuring value typed using discriminated unions
 // That's why getFullColorData has 1 parameter
 export const getFullColorData: GetFullColorData = (params) => {
+  console.trace('getFullColorData params', { params })
   const { from } = params
-  
-  let RGB: Color = [0, 0, 0, 1], LCH: Color = [0, 0, 0, 1], 
-  GRADIENT_STOPS: GradientStops, IS_WITHIN_SRGB: boolean | undefined
+
+  let RGB: Color = [0, 0, 0, 1], LCH: Color = [0, 0, 0, 1],
+    GRADIENT_STOPS: GradientStops, IS_WITHIN_SRGB: boolean | undefined
   console.log('getFullColorData', from, params.value)
   if (from === 'RGB') {
     params.value
@@ -255,32 +269,33 @@ export const getFullColorData: GetFullColorData = (params) => {
   switch (from) {
     case 'RGB':
       RGB = params.value
-      LCH = sRGB_to_LCH_values(...RGB)
+      LCH = sRGB_to_LCH_values(...RGB, params.colorSpace === 'CIELCH')
       break
     case 'LCH':
-    // case 'L_SLIDER':
-    // case 'C_SLIDER':
-    // case 'H_SLIDER':
+      // case 'L_SLIDER':
+      // case 'C_SLIDER':
+      // case 'H_SLIDER':
       LCH = params.value
       console.log({ LCH }, 'controller switch')
-      ;({ RGB, IS_WITHIN_SRGB } = LCH_to_sRGB_values(...LCH, true))
+      ;({ RGB, IS_WITHIN_SRGB } = LCH_to_sRGB_values(...LCH, true, params.colorSpace === 'CIELCH'))
+      console.log({ RGB, IS_WITHIN_SRGB })
       break
     case 'RGB_CSS':
       RGB = sRGB_string_to_sRGB(params.value)
-      LCH = sRGB_to_LCH_values(...RGB)
+      LCH = sRGB_to_LCH_values(...RGB, params.colorSpace === 'CIELCH')
       break
     case 'LCH_CSS':
       LCH = LCH_string_to_LCH(params.value)
-      ;({ RGB, IS_WITHIN_SRGB } = LCH_to_sRGB_values(...LCH, true))
+      ;({ RGB, IS_WITHIN_SRGB } = LCH_to_sRGB_values(...LCH, true, params.colorSpace === 'CIELCH'))
       break
     case 'HEX_CSS':
       RGB = hex_to_sRGB(params.value)
-      LCH = sRGB_to_LCH_values(...RGB)
+      LCH = sRGB_to_LCH_values(...RGB, params.colorSpace === 'CIELCH')
       break
     case 'ALPHA':
-    // case 'ALPHA_SLIDER':
+      // case 'ALPHA_SLIDER':
       if (!params.prevState) break
-      console.log('getFullColorData', {prevState: params.prevState, value: params.value})
+      console.log('getFullColorData', { prevState: params.prevState, value: params.value })
       RGB = params.prevState.RGB
       LCH = params.prevState.LCH
       RGB[3] = params.value[3]
@@ -294,16 +309,16 @@ export const getFullColorData: GetFullColorData = (params) => {
   }
 
   // Generate CSS strings
-  let strings = colorsToStrings(RGB, LCH)
+  let strings = colorsToStrings(RGB, LCH, from !== 'LCH')
   // Generate gradient stops for sliders
-  GRADIENT_STOPS ||= getGradientStops(LCH[0], LCH[1], LCH[2])
+  GRADIENT_STOPS ||= getGradientStops(LCH[0], LCH[1], LCH[2], params.colorSpace === 'CIELCH')
   // Setting IS_WITHIN_SRGB if not already defined
   //console.log({IS_WITHIN_SRGB}, 'case before ??=')
   IS_WITHIN_SRGB ??= true
-  
+
 
   let newState = {
-    RGB, LCH, ...strings, GRADIENT_STOPS, IS_WITHIN_SRGB
+    RGB, LCH, ...strings, GRADIENT_STOPS, IS_WITHIN_SRGB,
   }
   console.log('getFullColorData', newState)
 
@@ -311,13 +326,14 @@ export const getFullColorData: GetFullColorData = (params) => {
 }
 
 // Calculate gradient color stops
-function getGradientStops (l: number, c: number, h: number): GradientStops {
-    // return ['black, white', 'black, black', 'black, black', 'transparent, black']
-    console.log('calc stops')
-    const L = slider_stops(range(0, 100, 6), null, c, h, 1)
-    const C = slider_stops(range(0, 132, 6), l, null, h, 1)
-    const H = slider_stops(range(0, 360, 13), l, c, null, 1)
-    const A = slider_stops(range(0, 1, 3), l, c, h, null)
+function getGradientStops(l: number, c: number, h: number, CIE=true): GradientStops {
+  // return ['black, white', 'black, black', 'black, black', 'transparent, black']
+  CIE = true;
+  console.log('calc stops')
+  const L = slider_stops(range(0, 100, 6), null, c, h, 1, CIE)
+  const C = slider_stops(range(0, 132, 6), l, null, h, 1, CIE)
+  const H = slider_stops(range(0, 360, 13), l, c, null, 1, CIE)
+  const A = slider_stops(range(0, 1, 3), l, c, h, null, CIE)
 
-    return [L, C, H, A]
+  return [L, C, H, A]
 }

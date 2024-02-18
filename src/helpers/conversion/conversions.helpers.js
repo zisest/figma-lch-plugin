@@ -396,60 +396,96 @@ export function LCH_to_Lab(LCH) {
 // OKLab and OKLCH
 // https://bottosson.github.io/posts/oklab/
 
+// function lin_sRGB_to_OKLab ([r, g, b]) {
+
+// 	let l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
+// 	let m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
+// 	let s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
+
+//     let l_ = Math.cbrt(l);
+//     let m_ = Math.cbrt(m);
+//     let s_ = Math.cbrt(s);
+
+//     return [
+// 			0.2104542553*l_ + 0.7936177850*m_ - 0.0040720468*s_,
+// 			1.9779984951*l_ - 2.4285922050*m_ + 0.4505937099*s_,
+// 			0.0259040371*l_ + 0.7827717662*m_ - 0.8086757660*s_,
+// 		];
+// }
+
+
+// function OKLab_to_linear_sRGB([L, a, b]) 
+// {
+//     let l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+//     let m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+//     let s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+
+//     let l = l_*l_*l_;
+//     let m = m_*m_*m_;
+//     let s = s_*s_*s_;
+
+//     return [
+// 			+4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+// 			-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+// 			-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+// 		];
+// }
+
+
 // XYZ <-> LMS matrices recalculated for consistent reference white
 // see https://github.com/w3c/csswg-drafts/issues/6642#issuecomment-943521484
+export function XYZ_to_OKLab(XYZ) {
+	// Given XYZ relative to D65, convert to OKLab
+	var XYZtoLMS = [
+		[ 0.8190224432164319,    0.3619062562801221,   -0.12887378261216414  ],
+		[ 0.0329836671980271,    0.9292868468965546,     0.03614466816999844 ],
+		[ 0.048177199566046255,  0.26423952494422764,    0.6335478258136937  ]
+	];
+	var LMStoOKLab = [
+		[  0.2104542553,   0.7936177850,  -0.0040720468 ],
+		[  1.9779984951,  -2.4285922050,   0.4505937099 ],
+		[  0.0259040371,   0.7827717662,  -0.8086757660 ]
+	];
 
-// function XYZ_to_OKLab(XYZ) {
-// 	// Given XYZ relative to D65, convert to OKLab
-// 	var XYZtoLMS = [
-// 		[ 0.8190224432164319,    0.3619062562801221,   -0.12887378261216414  ],
-// 		[ 0.0329836671980271,    0.9292868468965546,     0.03614466816999844 ],
-// 		[ 0.048177199566046255,  0.26423952494422764,    0.6335478258136937  ]
-// 	];
-// 	var LMStoOKLab = [
-// 		[  0.2104542553,   0.7936177850,  -0.0040720468 ],
-// 		[  1.9779984951,  -2.4285922050,   0.4505937099 ],
-// 		[  0.0259040371,   0.7827717662,  -0.8086757660 ]
-// 	];
+	var LMS = multiplyMatrices(XYZtoLMS, XYZ);
+	return multiplyMatrices(LMStoOKLab, LMS.map(c => Math.cbrt(c)));
+	// L in range [0,1]. For use in CSS, multiply by 100 and add a percent
+}
 
-// 	var LMS = multiplyMatrices(XYZtoLMS, XYZ);
-// 	return multiplyMatrices(LMStoOKLab, LMS.map(c => Math.cbrt(c)));
-// 	// L in range [0,1]. For use in CSS, multiply by 100 and add a percent
-// }
+export function OKLab_to_XYZ(OKLab) {
+	// Given OKLab, convert to XYZ relative to D65
+	var LMStoXYZ =  [
+		[  1.2268798733741557,  -0.5578149965554813,   0.28139105017721583 ],
+		[ -0.04057576262431372,  1.1122868293970594,  -0.07171106666151701 ],
+		[ -0.07637294974672142, -0.4214933239627914,   1.5869240244272418  ]
+	];
+	var OKLabtoLMS = [
+        [ 0.99999999845051981432,  0.39633779217376785678,   0.21580375806075880339  ],
+        [ 1.0000000088817607767,  -0.1055613423236563494,   -0.063854174771705903402 ],
+        [ 1.0000000546724109177,  -0.089484182094965759684, -1.2914855378640917399   ]
+    ];
 
-// function OKLab_to_XYZ(OKLab) {
-// 	// Given OKLab, convert to XYZ relative to D65
-// 	var LMStoXYZ =  [
-// 		[  1.2268798733741557,  -0.5578149965554813,   0.28139105017721583 ],
-// 		[ -0.04057576262431372,  1.1122868293970594,  -0.07171106666151701 ],
-// 		[ -0.07637294974672142, -0.4214933239627914,   1.5869240244272418  ]
-// 	];
-// 	var OKLabtoLMS = [
-//         [ 0.99999999845051981432,  0.39633779217376785678,   0.21580375806075880339  ],
-//         [ 1.0000000088817607767,  -0.1055613423236563494,   -0.063854174771705903402 ],
-//         [ 1.0000000546724109177,  -0.089484182094965759684, -1.2914855378640917399   ]
-//     ];
+	var LMSnl = multiplyMatrices(OKLabtoLMS, OKLab);
+	return multiplyMatrices(LMStoXYZ, LMSnl.map(c => c ** 3));
+}
 
-// 	var LMSnl = multiplyMatrices(OKLabtoLMS, OKLab);
-// 	return multiplyMatrices(LMStoXYZ, LMSnl.map(c => c ** 3));
-// }
+export function OKLab_to_OKLCH(OKLab) {
+	var hue = Math.atan2(OKLab[2], OKLab[1]) * 180 / Math.PI;
+	return [
+		OKLab[0], // L is still L
+		Math.sqrt(OKLab[1] ** 2 + OKLab[2] ** 2), // Chroma
+		hue >= 0 ? hue : hue + 360 // Hue, in degrees [0 to 360)
+	];
+}
 
-// function OKLab_to_OKLCH(OKLab) {
-// 	var hue = Math.atan2(OKLab[2], OKLab[1]) * 180 / Math.PI;
-// 	return [
-// 		OKLab[0], // L is still L
-// 		Math.sqrt(OKLab[1] ** 2 + OKLab[2] ** 2), // Chroma
-// 		hue >= 0 ? hue : hue + 360 // Hue, in degrees [0 to 360)
-// 	];
-// }
+export function OKLCH_to_OKLab(OKLCH) {
+	return [
+		OKLCH[0], // L is still L
+		OKLCH[1] * Math.cos(OKLCH[2] * Math.PI / 180), // a
+		OKLCH[1] * Math.sin(OKLCH[2] * Math.PI / 180)  // b
+	];
+}
 
-// function OKLCH_to_OKLab(OKLCH) {
-// 	return [
-// 		OKLCH[0], // L is still L
-// 		OKLCH[1] * Math.cos(OKLCH[2] * Math.PI / 180), // a
-// 		OKLCH[1] * Math.sin(OKLCH[2] * Math.PI / 180)  // b
-// 	];
-// }
 
 // // Premultiplied alpha conversions
 

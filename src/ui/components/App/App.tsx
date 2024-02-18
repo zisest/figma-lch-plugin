@@ -14,16 +14,18 @@ import TextInputGroup from '../TextInputGroup'
 
 import { getFullColorData } from '../../../helpers/colors.helpers'
 import ColorSwitcher from '../ColorSwitcher'
-import { AutoRepaintFromUI, Color, ColorAction, ColorInputFromUI, ColorState, ColorToController, 
-  FillsOrStrokes, LCH_value, MessageEventToUI, ModeFromUI, PartialColorState, PickFromSelectionFromUI, 
-  RGB_value, TooltipAlreadyShownFromUI } from '../../../types'
+import {
+  AutoRepaintFromUI, Color, ColorAction, ColorInputFromUI, ColorState, ColorToController,
+  FillsOrStrokes, LCH_value, MessageEventToUI, ModeFromUI, PartialColorState, PickFromSelectionFromUI,
+  RGB_value, TooltipAlreadyShownFromUI,
+} from '../../../types'
 import Switch from '../Switch'
 import { useThrottle } from '../../hooks/use-throttle.hook'
 import { COLOR_INDEX_MAP, initialState, LCH_MAP } from './App.constants'
 import { areLCHValuesMixed, calculateFromLCH, getColorValue, switchColorValues } from './App.helpers'
 
 
-function stateReducer (state: ColorState[], action: ColorAction): ColorState[] {
+function stateReducer(state: ColorState[], action: ColorAction): ColorState[] {
   console.log('reducer', 'colors' in action && action.colors)
   switch (action.type) {
     case 'set-color':
@@ -31,24 +33,31 @@ function stateReducer (state: ColorState[], action: ColorAction): ColorState[] {
       return state.map((color, i) => action.selectedColors.includes(i) ? { ...color, ...action.newColor } : color)
     case 'set-all-colors':
       console.log('Setting new state', action.colors)
-      return action.colors    
+      return action.colors
     case 'from-LCH-slider': {
       let { valueName, value } = action
-      return state.map((color, i) => action.selectedColors.includes(i) ? { ...color, LCH: switchColorValues(color.LCH, valueName, value) } : color)
+      return state.map((color, i) => action.selectedColors.includes(i) ? {
+        ...color,
+        LCH: switchColorValues(color.LCH, valueName, value),
+      } : color)
     }
     case 'from-LCH-calc': { // should set all LCH values except the one that initiated calc
-      return action.colors.map((color, i) => 
+      return action.colors.map((color, i) =>
         ({ ...color, LCH: switchColorValues(color.LCH, action.except, getColorValue(state[i].LCH, action.except)) }))
     }
     case 'from-RGB': {
-      let { valueName, value, selectedColors } = action
+      let { valueName, value, selectedColors, colorSpace } = action
       if (selectedColors.length > 1) return state
       let color = state[selectedColors[0]]
-      console.log('!', {color})
-      let newColor = getFullColorData({ from: 'RGB', value: switchColorValues(color.RGB, valueName, value) })
-      console.log('!', {newColor})
+      console.log('from-RGB!',  {  colorSpace,color })
+      let newColor = getFullColorData({
+        from: 'RGB',
+        value: switchColorValues(color.RGB, valueName, value),
+        colorSpace,
+      })
+      console.log('!', { newColor })
 
-      return [ ...state.slice(0, selectedColors[0]), { ...color, ...newColor }, ...state.slice(selectedColors[0] + 1) ]
+      return [...state.slice(0, selectedColors[0]), { ...color, ...newColor }, ...state.slice(selectedColors[0] + 1)]
     }
     default:
       return state
@@ -61,22 +70,37 @@ const App = () => {
   const [colors, dispatchColors] = useReducer(stateReducer, [initialState])
   const [selectedColors, setSelectedColors] = useState([0])
   const multipleColorsSelected = selectedColors.length > 1
-  console.log({colors})
+  console.log({ colors })
   // const [state2, dispatch] = useReducer(reducer, initialState)
   const state = colors[selectedColors[0]] || colors[0]
   const LCHValuesMixed = areLCHValuesMixed(colors, selectedColors)
-  console.log({LCHValuesMixed})
+  console.log({ LCHValuesMixed })
 
   const [isRGB8Bit, setIsRGB8Bit] = useState(true)
   const [RGBString, setRGBString] = useState(initialState.RGB_CSS_8)
   const [LCHString, setLCHString] = useState(initialState.LCH_CSS)
   const [hexString, setHexString] = useState(initialState.HEX_CSS)
 
+  const [colorSpace, _setColorSpace] = useState<'CIELCH' | 'OKLCH'>('CIELCH')
+
+  function setColorSpace(value: 'CIELCH' | 'OKLCH') {
+    _setColorSpace(value)
+    const newColors = colors.map(color => ({
+      ...color, ...getFullColorData({
+        from: 'LCH',
+        value: color.LCH,
+        colorSpace: value,
+      }),
+    }))
+    console.log('calc new colors')
+    dispatchColors({ type: 'set-all-colors', colors: newColors })
+  }
+
   // Settings from plugin's clientStorage
   const [autoRepaint, setAutoRepaint] = useState(false)
   const [fillsOrStrokes, setFillsOrStrokes] = useState<FillsOrStrokes>('fills')
   const [tooltipAlreadyShown, setTooltipAlreadyShown] = useState(true)
-  console.log({fillsOrStrokes})
+  console.log({ fillsOrStrokes })
 
   // *Semi-controlled inputs*
   // Handle alpha text field values
@@ -96,12 +120,11 @@ const App = () => {
   }
 
 
-
-  function sendRGBToController (colors: ColorToController[], forceRepaint: boolean = false) {
+  function sendRGBToController(colors: ColorToController[], forceRepaint: boolean = false) {
     const pluginMessage: ColorInputFromUI = { type: 'color-from-ui', message: { colors, forceRepaint } }
     parent.postMessage({ pluginMessage }, '*')
   }
-  
+
   const throttledSendRGBToController = useThrottle(100, sendRGBToController)
 
   const handleLCH = (e: ChangeEvent<HTMLInputElement>, currentState: ColorState[], selectedColors: number[]) => {
@@ -112,22 +135,28 @@ const App = () => {
     const { index, maxValue } = LCH_MAP[valueName]
 
     if (e.target.type === 'text') {
-      if (!/^\d*$/.test(value) || +value > maxValue ) {
+      if (!/^\d*$/.test(value) || +value > maxValue) {
         e.preventDefault()
         return
       }
     }
 
     console.log('%c', 'color: green', index)
-    value = Number(value)   
-    
-    const { allColors, newSelection, colorsToController } = calculateFromLCH(currentState, selectedColors, value, valueName)
+    value = Number(value)
 
-    console.log({allColors, newSelection})
+    console.log('handleLCH', colorSpace)
+
+    const {
+      allColors,
+      newSelection,
+      colorsToController,
+    } = calculateFromLCH(currentState, selectedColors, value, valueName, colorSpace)
+
+    console.log({ allColors, newSelection })
     if (newSelection?.length) setSelectedColors(newSelection)
     dispatchColors({ type: 'from-LCH-calc', colors: allColors, except: valueName })
     // dispatchColors({ type: 'set-all-colors', colors: allColors })
-    
+
 
     throttledSendRGBToController(colorsToController)
   }
@@ -160,14 +189,18 @@ const App = () => {
     } else {
       value = Number(value)
     }
-    
-    const { allColors, newSelection, colorsToController } = calculateFromLCH(currentState, selectedColors, value, 'A')
 
-    console.log({allColors, newSelection})
+    const {
+      allColors,
+      newSelection,
+      colorsToController,
+    } = calculateFromLCH(currentState, selectedColors, value, 'A', colorSpace)
+
+    console.log({ allColors, newSelection })
     if (newSelection?.length) setSelectedColors(newSelection)
     // dispatchColors({ type: 'set-all-colors', colors: allColors })
     dispatchColors({ type: 'from-LCH-calc', colors: allColors, except: 'A' })
-    
+
     throttledSendRGBToController(colorsToController)
   }
 
@@ -179,11 +212,11 @@ const App = () => {
   }
 
   // RGB
-  const handleRGB = (e: ChangeEvent<HTMLInputElement>) => {    
+  const handleRGB = (e: ChangeEvent<HTMLInputElement>) => {
     let value: string | number = e.target.value
     const valueName = e.target.name as RGB_value
     if (!['R', 'G', 'B'].includes(valueName)) throw new Error('Invalid initiator label @handleRGB')
-    
+
     if (!/^\d*$/.test(value) || +value > 255) {
       e.preventDefault()
       return
@@ -193,7 +226,7 @@ const App = () => {
 
     let rgb: Color = [...state.RGB]
     rgb[COLOR_INDEX_MAP[valueName]] = value
-    dispatchColors({ type: 'from-RGB', selectedColors, value, valueName })
+    dispatchColors({ type: 'from-RGB', selectedColors, value, valueName, colorSpace })
 
     sendRGBToController([{ RGB: rgb, NODE_IDS: state.NODE_IDS }])
   }
@@ -207,12 +240,12 @@ const App = () => {
 
     let newColor: PartialColorState
     try {
-      newColor = getFullColorData({ from: valueName, value })
+      newColor = getFullColorData({ from: valueName, value, colorSpace })
     } catch (err) {
       let setter = ({
         'LCH_CSS': setLCHString,
         'RGB_CSS': setRGBString,
-        'HEX_CSS': setHexString
+        'HEX_CSS': setHexString,
       })[valueName]
       setter(state[valueName])
       return
@@ -236,30 +269,34 @@ const App = () => {
 
   // *Sending messages to controller*
   // Request to fill selection with current color
-  function paintSelection () {
+  function paintSelection() {
     sendRGBToController(colors, true)
   }
-  function pickFromSelection () {
+
+  function pickFromSelection() {
     const pluginMessage: PickFromSelectionFromUI = { type: 'pick-from-selection' }
     parent.postMessage({ pluginMessage }, '*')
   }
-  function switchAutoRepaint (value: boolean) {
+
+  function switchAutoRepaint(value: boolean) {
     console.log('Request controller to change auto-repaint to: ', value)
     const pluginMessage: AutoRepaintFromUI = { type: 'set-auto-repaint', message: { value } }
     parent.postMessage({ pluginMessage }, '*')
   }
-  function switchFillsOrStrokes (value: FillsOrStrokes) {
+
+  function switchFillsOrStrokes(value: FillsOrStrokes) {
     console.log('Request controller to change fills or strokes to: ', value)
     const pluginMessage: ModeFromUI = { type: 'set-fills-or-strokes', message: { value } }
     parent.postMessage({ pluginMessage }, '*')
   }
-  function hideHelpTooltip () {
+
+  function hideHelpTooltip() {
     const pluginMessage: TooltipAlreadyShownFromUI = { type: 'set-tooltip-already-shown' }
-    parent.postMessage({ pluginMessage }, '*')    
+    parent.postMessage({ pluginMessage }, '*')
   }
 
   // *Handling messages from controller*
-  function handleMessagesToUI (event: MessageEvent<MessageEventToUI>) {
+  function handleMessagesToUI(event: MessageEvent<MessageEventToUI>) {
     const pluginMessage = event.data.pluginMessage
     switch (pluginMessage.type) {
       case 'color-to-ui': // get color from selection
@@ -271,15 +308,15 @@ const App = () => {
         Object.entries(allFills.solid).forEach(([RGBString, nodes]) => {
           const RGB = RGBString.split(',').map(Number)
           if (RGB.length !== 4) return
-          let colorState = getFullColorData({ from: 'RGB', value: RGB as Color  })
-          solidFills.push({...colorState, NODE_IDS: nodes})
+          let colorState = getFullColorData({ from: 'RGB', value: RGB as Color, colorSpace })
+          solidFills.push({ ...colorState, NODE_IDS: nodes })
         })
-        
+
         // Gradients
         const gradientFills: ColorState[] = []
         Object.entries(allFills.gradient).forEach(([hash, { colors, nodes }]) => {
           for (const { RGB, pos } of colors) {
-            let colorState = getFullColorData({ from: 'RGB', value: RGB })
+            let colorState = getFullColorData({ from: 'RGB', value: RGB, colorSpace })
             gradientFills.push({ ...colorState, NODE_IDS: nodes, GRADIENT_HASH: hash, GRADIENT_STOP_POS: pos })
           }
         })
@@ -287,7 +324,7 @@ const App = () => {
         // Setting state
         if (solidFills?.length || gradientFills?.length) {
           setSelectedColors([0])
-          dispatchColors({ type: 'set-all-colors', colors: [...solidFills, ...gradientFills]})
+          dispatchColors({ type: 'set-all-colors', colors: [...solidFills, ...gradientFills] })
         }
         break
       case 'set-auto-repaint-ui':
@@ -313,97 +350,112 @@ const App = () => {
   }, [])
 
   // store current color (and its 100% opaque version as CSS variables)
-  let currentColor = { '--current-color': state.RGB_CSS_8, '--current-color-opaque': state.RGB_CSS_8_OPAQUE } as React.CSSProperties
+  let currentColor = {
+    '--current-color': state.RGB_CSS_8,
+    '--current-color-opaque': state.RGB_CSS_8_OPAQUE,
+  } as React.CSSProperties
   return (
-    <div className="ui" style={currentColor}>
-      <Tooltip text='Use Ctrl (Cmd) or Shift keys to select multiple colors' pos='center' 
-        onHide={hideHelpTooltip} width={140} 
-        autoDisplay disabled={tooltipAlreadyShown || colors.length === 1}
+    <div className='ui' style={currentColor}>
+      <Tooltip text='Use Ctrl (Cmd) or Shift keys to select multiple colors' pos='center'
+               onHide={hideHelpTooltip} width={140}
+               autoDisplay disabled={tooltipAlreadyShown || colors.length === 1}
       >
-        <ColorSwitcher colors={colors} selectedColors={selectedColors} setSelectedColors={selected => setSelectedColors(selected)} />
+        <ColorSwitcher colors={colors} selectedColors={selectedColors}
+                       setSelectedColors={selected => setSelectedColors(selected)} />
       </Tooltip>
-      <div className="section fills-or-strokes">
-        <Switch name="fills-or-strokes" values={['fills', 'strokes']} selected={fillsOrStrokes} onChange={v => switchFillsOrStrokes(v as FillsOrStrokes)} id="input_fills-or-strokes" />
+      <div className='section fills-or-strokes'>
+        <Switch name='fills-or-strokes' values={['fills', 'strokes']} selected={fillsOrStrokes}
+                onChange={v => switchFillsOrStrokes(v as FillsOrStrokes)} id='input_fills-or-strokes' />
+
       </div>
-      <div className="section">
-        <Slider 
-          min={0} step={1} max={100} name="L" value={state.LCH[0]} hideKnob={LCHValuesMixed[0]}
+      <div className='section'>
+        <Slider
+          min={0} step={1} max={100} name='L' value={state.LCH[0]} hideKnob={LCHValuesMixed[0]}
           onChange={handleLCHSliders} gradientStops={state.GRADIENT_STOPS[0]}
         />
-        <Slider 
-          min={0} step={1} max={132} name="C" value={state.LCH[1]} hideKnob={LCHValuesMixed[1]}
+        <Slider
+          min={0} step={1} max={132} name='C' value={state.LCH[1]} hideKnob={LCHValuesMixed[1]}
           onChange={handleLCHSliders} gradientStops={state.GRADIENT_STOPS[1]}
         />
-        <Slider 
-          min={0} step={1} max={360} name="H" value={state.LCH[2]} hideKnob={LCHValuesMixed[2]}
+        <Slider
+          min={0} step={1} max={360} name='H' value={state.LCH[2]} hideKnob={LCHValuesMixed[2]}
           onChange={handleLCHSliders} gradientStops={state.GRADIENT_STOPS[2]}
         />
-        <div className="alpha-block">
-          <Slider 
-            min={0} step={0.01} max={1} name="A" hideKnob={LCHValuesMixed[3]}
-            value={state.LCH[3]} 
+        <div className='alpha-block'>
+          <Slider
+            min={0} step={0.01} max={1} name='A' hideKnob={LCHValuesMixed[3]}
+            value={state.LCH[3]}
             onChange={handleAlphaSlider} gradientStops={state.GRADIENT_STOPS[3]}
           />
-          <TextInput 
-            name="A" value={LCHValuesMixed[3] ? '-' : alphaFieldValue} onBlur={e => handleAlpha(e, colors, selectedColors)} 
+          <TextInput
+            name='A' value={LCHValuesMixed[3] ? '-' : alphaFieldValue}
+            onBlur={e => handleAlpha(e, colors, selectedColors)}
             onChange={parseAlphaField} disabled={LCHValuesMixed[3]}
           />
         </div>
       </div>
-      
-      <div className="section">
-        <div className="color-inputs">
-          <div className="label">LCH</div>
+
+      <div className='section'>
+        <div className='color-inputs'>
+          <div className='label'>LCH</div>
           <TextInputGroup>
-            <TextInput name="L" value={LCHValuesMixed[0] ? '-' : state.LCH[0]} onChange={handleLCHInputs} />
-            <TextInput name="C" value={LCHValuesMixed[1] ? '-' : state.LCH[1]} onChange={handleLCHInputs} />
-            <TextInput name="H" value={LCHValuesMixed[2] ? '-' : state.LCH[2]} onChange={handleLCHInputs} />
-          </TextInputGroup>          
+            <TextInput name='L' value={LCHValuesMixed[0] ? '-' : state.LCH[0]} onChange={handleLCHInputs} />
+            <TextInput name='C' value={LCHValuesMixed[1] ? '-' : state.LCH[1]} onChange={handleLCHInputs} />
+            <TextInput name='H' value={LCHValuesMixed[2] ? '-' : state.LCH[2]} onChange={handleLCHInputs} />
+          </TextInputGroup>
         </div>
-        <div className="color-inputs">
-          <div className="label">RGB</div>
+        <div className='color-inputs'>
+          <div className='label'>RGB</div>
           <TextInputGroup>
-            <TextInput name="R" value={multipleColorsSelected ? '-' : Math.round(state.RGB[0] * 255)} onChange={handleRGB} disabled={multipleColorsSelected} />
-            <TextInput name="G" value={multipleColorsSelected ? '-' : Math.round(state.RGB[1] * 255)} onChange={handleRGB} disabled={multipleColorsSelected} />
-            <TextInput name="B" value={multipleColorsSelected ? '-' : Math.round(state.RGB[2] * 255)} onChange={handleRGB} disabled={multipleColorsSelected} />
-          </TextInputGroup>          
-          
-          {!state.IS_WITHIN_SRGB && 
-            <Tooltip text="Color value is outside sRGB gamut" pos="right">
-              <Icon color="red" iconName="warning" />
+            <TextInput name='R' value={multipleColorsSelected ? '-' : Math.round(state.RGB[0] * 255)}
+                       onChange={handleRGB} disabled={multipleColorsSelected} />
+            <TextInput name='G' value={multipleColorsSelected ? '-' : Math.round(state.RGB[1] * 255)}
+                       onChange={handleRGB} disabled={multipleColorsSelected} />
+            <TextInput name='B' value={multipleColorsSelected ? '-' : Math.round(state.RGB[2] * 255)}
+                       onChange={handleRGB} disabled={multipleColorsSelected} />
+          </TextInputGroup>
+
+          {!state.IS_WITHIN_SRGB &&
+            <Tooltip text='Color value is outside sRGB gamut' pos='right'>
+              <Icon color='red' iconName='warning' />
             </Tooltip>
           }
         </div>
       </div>
-      
-      <div className="section">
+
+      <div className='section'>
         <SectionTitle>CSS Strings</SectionTitle>
-        <div className="css-string">
-          <TextInput 
+        <div className='css-string'>
+          <TextInput
             value={LCHString} disabled={LCHValuesMixed.some(Boolean)} onChange={(e) => setLCHString(e.target.value)}
-            onBlur={handleCSSFieldsBlur} name="LCH_CSS" withCopyBtn 
+            onBlur={handleCSSFieldsBlur} name='LCH_CSS' withCopyBtn
           />
         </div>
-        <div className="css-string css-string__rgb">
-          <TextInput 
+        <div className='css-string css-string__rgb'>
+          <TextInput
             value={RGBString} disabled={LCHValuesMixed.some(Boolean)} onChange={(e) => setRGBString(e.target.value)}
-            onBlur={handleCSSFieldsBlur} name="RGB_CSS" withCopyBtn 
-          />      
-          <IconButton onClick={() => setIsRGB8Bit(prev => !prev)} iconName="swap" />
+            onBlur={handleCSSFieldsBlur} name='RGB_CSS' withCopyBtn
+          />
+          <IconButton onClick={() => setIsRGB8Bit(prev => !prev)} iconName='swap' />
         </div>
-        <div className="css-string">
-          <TextInput 
+        <div className='css-string'>
+          <TextInput
             value={hexString} disabled={LCHValuesMixed.some(Boolean)} onChange={(e) => setHexString(e.target.value)}
-            onBlur={handleCSSFieldsBlur} name="HEX_CSS" withCopyBtn 
+            onBlur={handleCSSFieldsBlur} name='HEX_CSS' withCopyBtn
           />
         </div>
-      </div>    
-      
-      <div className="section buttons-section">
+      </div>
+
+      <div className='section buttons-section'>
         <Button onClick={pickFromSelection} secondary>Pick Color</Button>
         <Button onClick={paintSelection} disabled={autoRepaint}>Paint Selection</Button>
-        <Checkbox label="Auto-Repaint" checked={autoRepaint} onChange={() => switchAutoRepaint(!autoRepaint)} id="input_auto-repaint" />        
-      </div>      
+        <div className='checkboxes'>
+          <Checkbox label='Use OKLCH' checked={colorSpace === 'OKLCH'}
+                    onChange={v => setColorSpace(v ? 'OKLCH' : 'CIELCH')} id='input_color-space' />
+          <Checkbox label='Auto-Repaint' checked={autoRepaint} onChange={() => switchAutoRepaint(!autoRepaint)}
+                    id='input_auto-repaint' />
+        </div>
+      </div>
     </div>
   )
 }

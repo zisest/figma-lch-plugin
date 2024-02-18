@@ -1,4 +1,4 @@
-const HtmlWebpackInlineSourcePlugin = require('html-webpack-inline-source-plugin')
+const InlineChunkHtmlPlugin = require('inline-chunk-html-plugin')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const path = require('path')
 
@@ -26,25 +26,13 @@ module.exports = (env, argv) => ({
       },
       { 
         test: /\.(png|jpg|gif|webp|svg)$/, 
-        use: [
-          {
-            loader: 'url-loader',
-            options: {
-              esModule: false
-            }
-          }
-        ]
+        type: 'asset/inline'
       },
     ],
   },
 
   // Webpack tries these extensions for you if you omit the extension like "import './file'"
   resolve: { extensions: ['.tsx', '.ts', '.jsx', '.js'] },
-
-  output: {
-    filename: '[name].js',
-    path: path.resolve(__dirname, 'dist'), // Compile into a folder called "dist"
-  },
 
   // Tells Webpack to generate "ui.html" and to inline "ui.ts" into it
   plugins: [
@@ -53,7 +41,8 @@ module.exports = (env, argv) => ({
       filename: 'ui.html',
       inlineSource: '.(js)$',
       chunks: ['ui'],
+      inject: 'body'
     }),
-    new HtmlWebpackInlineSourcePlugin(),
+    new InlineChunkHtmlPlugin(HtmlWebpackPlugin),
   ],
 })

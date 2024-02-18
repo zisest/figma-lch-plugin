@@ -27,7 +27,7 @@ export interface PaintsByColor {
   },
   gradient: {
     [gradientHash: string]: { colors: Array<{ RGB: Color, pos: number }>, nodes: string[] }
-  }  
+  }
 }
 
 interface SetColorAction {
@@ -53,6 +53,7 @@ interface SetFromLCHSliderAction {
 }
 interface SetFromRGBAction {
   type: 'from-RGB',
+  colorSpace: 'CIELCH' | 'OKLCH',
   selectedColors: number[],
   value: number,
   valueName: RGBA_value
@@ -62,14 +63,14 @@ export type ColorAction = SetColorAction | SetAllColorsAction | SetFromLCHCalcAc
 
 
 export interface ColorToController {
-  RGB: Color, 
+  RGB: Color,
   NODE_IDS: string[],
   GRADIENT_STOP_POS?: number
 }
 
 export type Boolean4 = [boolean, boolean, boolean, boolean]
 
-export type LCH_value = 'L' | 'C' | 'H' 
+export type LCH_value = 'L' | 'C' | 'H'
 export type LCHA_value = LCH_value | 'A'
 export type RGB_value = 'R' | 'G' | 'B'
 export type RGBA_value = RGB_value | 'A'
@@ -86,7 +87,7 @@ export interface AutoRepaintFromUI {
 
 export interface ColorInputFromUI {
   type: 'color-from-ui',
-  message: { 
+  message: {
     colors: ColorToController[],
     forceRepaint?: boolean
   }
@@ -122,7 +123,7 @@ export interface AutoRepaintToUI {
 
 export interface ModeToUI {
   type: 'set-fills-or-strokes-ui',
-  value: FillsOrStrokes 
+  value: FillsOrStrokes
 }
 
 export interface ColorInputToUI {
@@ -132,23 +133,26 @@ export interface ColorInputToUI {
 
 type MessageToUI = TooltipAlreadyShownToUI | AutoRepaintToUI | ModeToUI | ColorInputToUI
 
-export interface MessageEventToUI {  
-  pluginMessage: MessageToUI  
+export interface MessageEventToUI {
+  pluginMessage: MessageToUI
 }
 
 // getFullColorData
 
 interface GetFullColorDataParams1 {
-  from: 'LCH' | 'RGB', 
+  from: 'LCH' | 'RGB',
+  colorSpace: 'CIELCH' | 'OKLCH'
   value: Color,
 }
 interface GetFullColorDataParams2 {
-  from: 'ALPHA', 
-  value: Color, 
+  from: 'ALPHA',
+  value: Color,
+  colorSpace: 'CIELCH' | 'OKLCH',
   prevState: ColorState
 }
 interface GetFullColorDataParams3 {
-  from: 'LCH_CSS' | 'RGB_CSS' | 'HEX_CSS', 
+  from: 'LCH_CSS' | 'RGB_CSS' | 'HEX_CSS',
+  colorSpace: 'CIELCH' | 'OKLCH'
   value: string
 }
 type GetFullColorDataParams = GetFullColorDataParams1 | GetFullColorDataParams2 | GetFullColorDataParams3
@@ -166,5 +170,5 @@ type InvalidNode = Exclude<SceneNode, ValidNodeMixin>
 export type NodeWithChildren = Extract<InvalidNode, ChildrenMixin>
 
 export type Mutable<T> = {
-  -readonly [K in keyof T]: T[K] 
+  -readonly [K in keyof T]: T[K]
 }

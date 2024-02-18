@@ -3,9 +3,10 @@ import { Boolean4, Color, ColorState, ColorToController, LCHA_value, RGBA_value 
 import { COLOR_INDEX_MAP, LCH_MAP } from './App.constants'
 
 
-export  function calculateFromLCH (currentState: ColorState[], selectedColors: number[], value: number, valueName: 'L' | 'C' | 'H' | 'A') {
+export function calculateFromLCH(currentState: ColorState[], selectedColors: number[], value: number, valueName: 'L' | 'C' | 'H' | 'A', colorSpace: 'CIELCH' | 'OKLCH') {
   let { index, otherIndices } = LCH_MAP[valueName]
   const initiator = valueName === 'A' ? 'ALPHA' : 'LCH'
+  console.log('calculateFromLCH', colorSpace)
 
   // Checking if colors will merge
   const mergeMap: { [hash: string]: number[] } = {}
@@ -13,7 +14,7 @@ export  function calculateFromLCH (currentState: ColorState[], selectedColors: n
   if (selectedColors.length !== 1) {
     for (const colorIndex of selectedColors) {
       let color = currentState[colorIndex]
-      const unchangedValuesHash = color.LCH.reduce((prev, curr, i) => otherIndices.includes(i) ? prev + '-' + curr : prev, '') 
+      const unchangedValuesHash = color.LCH.reduce((prev, curr, i) => otherIndices.includes(i) ? prev + '-' + curr : prev, '')
         + color.GRADIENT_HASH + color.GRADIENT_STOP_POS
 
       if (!(unchangedValuesHash in mergeMap))
@@ -25,7 +26,7 @@ export  function calculateFromLCH (currentState: ColorState[], selectedColors: n
     }
     console.log({ mergeMap })
   }
-  
+
   // No need to merge colors
   if (!shouldMerge) {
     console.log('SHOULD NOT MERGE COLORS')
@@ -36,9 +37,16 @@ export  function calculateFromLCH (currentState: ColorState[], selectedColors: n
       let lch = currentState[colorIndex].LCH
       lch[index] = value
 
-      let newState: ColorState = { ...currentState[colorIndex], ...getFullColorData({ from: initiator, value: lch, prevState: currentState[colorIndex] }) }
+      let newState: ColorState = {
+        ...currentState[colorIndex], ...getFullColorData({
+          from: initiator,
+          value: lch,
+          prevState: currentState[colorIndex],
+          colorSpace,
+        }),
+      }
       newColors[colorIndex] = newState
-      console.log('!shouldMerge', {newState})
+      console.log('!shouldMerge', { newState })
 
       // Send to controller
       let colorToController: ColorToController = { RGB: newState.RGB, NODE_IDS: newState.NODE_IDS }
@@ -50,7 +58,7 @@ export  function calculateFromLCH (currentState: ColorState[], selectedColors: n
       if (i in newColors) allColors.push(newColors[i])
       else allColors.push(color)
     })
-    console.log('!shouldMerge', {allColors})
+    console.log('!shouldMerge', { allColors })
     // dispatchColors({ type: 'set-all-colors', colors: allColors })
     // throttledSendRGBToController(colorsToController)
     return { allColors, colorsToController }
@@ -58,7 +66,7 @@ export  function calculateFromLCH (currentState: ColorState[], selectedColors: n
 
   // Merging colors
   const removedFromSelection: number[] = []
-  const newColors: {[key: number]: ColorState} = {}
+  const newColors: { [key: number]: ColorState } = {}
   for (const indices of Object.values(mergeMap)) {
     if (indices.length > 1) { // Removing extra colors
       removedFromSelection.push(...indices.slice(1))
@@ -67,11 +75,18 @@ export  function calculateFromLCH (currentState: ColorState[], selectedColors: n
     let lch = currentState[indices[0]].LCH
     lch[index] = value
 
-    let newState: ColorState = { ...getFullColorData({ from: initiator, value: lch, prevState: currentState[indices[0]]}), NODE_IDS: [] }
+    let newState: ColorState = {
+      ...getFullColorData({
+        from: initiator,
+        value: lch,
+        prevState: currentState[indices[0]],
+        colorSpace,
+      }), NODE_IDS: [],
+    }
     indices.forEach(i => newState.NODE_IDS?.push(...currentState[i].NODE_IDS))
     newColors[indices[0]] = newState
   }
-  console.log({newColors})
+  console.log({ newColors })
   // Resulting color states and new selection
   let allColors: ColorState[] = []
   let newSelection: number[] = []
@@ -95,9 +110,9 @@ export  function calculateFromLCH (currentState: ColorState[], selectedColors: n
 }
 
 
-export function areLCHValuesMixed (colors: ColorState[], selectedColors: number[]): Boolean4 {
+export function areLCHValuesMixed(colors: ColorState[], selectedColors: number[]): Boolean4 {
   if (selectedColors.length === 1) return [false, false, false, false]
-  let LCHA: Array<number|boolean> = colors[selectedColors[0]].LCH
+  let LCHA: Array<number | boolean> = colors[selectedColors[0]].LCH
   let result: Boolean4 = [false, false, false, false]
 
   for (let i = 1; i < selectedColors.length; ++i) {
