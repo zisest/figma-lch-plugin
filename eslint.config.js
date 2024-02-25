@@ -27,6 +27,12 @@ module.exports = [
         plugins: {
             '@figma/figma-plugins': figma,
         },
+        languageOptions: {
+            parser: typescriptParser,
+            parserOptions: {
+                project: 'tsconfig.json',
+            },
+        },
     },
     {
         files: ['src/**/*.ts'],
