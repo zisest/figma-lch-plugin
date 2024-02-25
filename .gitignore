@@ -1,1 +1,9 @@
-figma-design
+.DS_Store
+*.log
+*.css.d.ts
+/build/
+/manifest.json
+node_modules/
+#.idea/
+#!.idea/jsonSchemas.xml
+

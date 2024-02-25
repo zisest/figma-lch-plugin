@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="JsonSchemaMappingsProjectConfiguration">
+    <state>
+      <map>
+        <entry key="https://yuanqing.github.io/create-figma-plugin/figma-plugin.json">
+          <value>
+            <SchemaInfo>
+              <option name="generatedName" value="New Schema" />
+              <option name="name" value="https://yuanqing.github.io/create-figma-plugin/figma-plugin.json" />
+              <option name="relativePathToSchema" value="https://yuanqing.github.io/create-figma-plugin/figma-plugin.json" />
+              <option name="patterns">
+                <list>
+                  <Item>
+                    <option name="path" value="package.json" />
+                  </Item>
+                </list>
+              </option>
+            </SchemaInfo>
+          </value>
+        </entry>
+      </map>
+    </state>
+  </component>
+</project>

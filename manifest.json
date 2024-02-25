@@ -1,8 +1,1 @@
-{
-    "name": "LCH",
-    "id": "969496279507778512",
-    "api": "1.0.0",
-    "main": "dist/main.js",
-    "ui": "dist/ui.html",
-    "editorType": ["figma"]
-}
+{"api":"1.0.0","editorType":["figma"],"id":"969496279507778512","name":"LCH","main":"build/main.js","ui":"build/ui.js"}
